@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FRT 시트 알람 PRO</title>
+    <style>
+        /* 기본 변수 (라이트 모드) */
+        :root {
+            --bg: #F2F2F7;
+            --card: #FFFFFF;
+            --text: #1C1C1E;
+            --secondary: #8E8E93;
+            --primary: #007AFF; 
+            --tab-bg: #E3E3E8;
+        }
+
+        /* 다크 모드 (일반) */
+        body.dark-mode {
+            --bg: #1C1C1E;
+            --card: #2C2C2E;
+            --text: #FFFFFF;
+            --secondary: #AEAEB2;
+            --tab-bg: #3A3A3C;
+        }
+
+        /* 다크 모드 (OLED) */
+        body.oled-mode {
+            --bg: #000000;
+            --card: #151515;
+            --text: #FFFFFF;
+            --secondary: #8E8E93;
+            --tab-bg: #222222;
+        }
+
+        /* 포인트 색상 테마 */
+        body.theme-orange { --primary: #FF9500; }
+        body.theme-red { --primary: #FF3B30; }
+        body.theme-magenta { --primary: #AF52DE; }
+        body.theme-blue { --primary: #007AFF; }
+
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; padding: 20px; 
+            transition: background 0.3s, color 0.3s;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .container { max-width: 500px; margin: auto; position: relative; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .settings-btn { font-size: 26px; cursor: pointer; background: none; border: none; color: var(--text); padding: 5px; }
+
+        .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: bold; color: var(--secondary); border-radius: 11px; cursor: pointer; border: none; background: transparent; transition: 0.2s; }
+        .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+
+        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 700; height: 1.2em; }
+        #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; }
+        #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; }
+
+        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; }
+        .radio-group { display: flex; background: var(--tab-bg); border-radius: 12px; padding: 2px; margin-bottom: 10px; }
+        .radio-group label { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; border-radius: 10px; cursor: pointer; color: var(--secondary); }
+        .radio-group input { display: none; }
+        .radio-group input:checked + label { background: var(--card); box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-weight: bold; color: var(--primary); }
+
+        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; }
+        .schedule-item { padding: 14px 18px; border-bottom: 0.5px solid var(--tab-bg); display: flex; justify-content: space-between; font-size: 13px; }
+        .schedule-item:last-child { border-bottom: none; }
+        .schedule-item.active-now { background: var(--tab-bg); border-radius: 14px; color: var(--primary); font-weight: bold; }
+
+        /* 공차 계산 UI */
+        .calc-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .calc-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--tab-bg); background: var(--bg); color: var(--text); font-size: 14px; text-align: center; font-weight: 600; }
+        .calc-btn-sub { padding: 0 15px; background: var(--tab-bg); color: var(--text); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .calc-btn-main { padding: 0 15px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .calc-result-box { margin-top: 12px; padding: 15px; background: var(--bg); border-radius: 12px; font-size: 14px; color: var(--text); line-height: 1.6; font-weight: 500; text-align: center; }
+
+        /* 설정 모달 */
+        #settings-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+        }
+        .modal-content { background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
+        .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
+    </style>
+</head>
+<body class="theme-blue">
+
+    <div class="container">
+        <div class="header">
+            <div class="current-time-bar" id="realtime-clock">00:00:00</div>
+            <button class="settings-btn" onclick="toggleSettings(true)">⚙️</button>
+        </div>
+
+        <div class="tab-menu">
+            <button class="tab-btn active" id="tab-rotation" onclick="setMode('rotation')">🔄 교대 근무</button>
+            <button class="tab-btn" id="tab-general" onclick="setMode('general')">⏳ 일반 근무</button>
+        </div>
+
+        <div class="card">
+            <div id="countdown-label">--</div>
+            <div id="timer-text">00:00</div>
+            <div id="current-task"></div>
+        </div>
+
+        <div id="position-section">
+            <span class="label">포지션</span>
+            <div class="radio-group">
+                <input type="radio" name="pos" id="lh" value="lh" checked><label for="lh">LH</label>
+                <input type="radio" name="pos" id="rest" value="rest"><label for="rest">휴식</label>
+                <input type="radio" name="pos" id="rh" value="rh"><label for="rh">RH</label>
+                <input type="radio" name="pos" id="glass" value="glass"><label for="glass">글라스</label>
+            </div>
+        </div>
+
+        <span class="label">근무조</span>
+        <div class="radio-group">
+            <input type="radio" name="shift" id="day" value="day" checked><label for="day">☀️ 주간</label>
+            <input type="radio" name="shift" id="night" value="night"><label for="night">🌙 야간</label>
+        </div>
+
+        <div id="general-extra" style="display: none;">
+            <span class="label">차량 도착 예상 (공차 계산)</span>
+            <div class="card" style="padding: 15px; margin-bottom: 0;">
+                <div class="calc-input-row">
+                    <input type="number" id="curr-car" class="calc-input" placeholder="현재 차번 (예: 4011)">
+                    <button class="calc-btn-sub" onclick="saveCurrCar()">확인</button>
+                </div>
+                <div class="calc-input-row">
+                    <input type="number" id="target-car" class="calc-input" placeholder="공바디 차번 (예: 4052)">
+                    <button class="calc-btn-main" onclick="startCalc()">계산</button>
+                </div>
+                <div class="calc-result-box" id="calc-result">
+                    대기중...
+                </div>
+            </div>
+        </div>
+
+        <span class="label">오늘의 상세 일정</span>
+        <div class="schedule-card">
+            <div id="schedule-list"></div>
+        </div>
+    </div>
+
+    <div id="settings-modal" onclick="if(event.target == this) toggleSettings(false)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>환경 설정</span>
+                <span class="close-btn" onclick="toggleSettings(false)">✕</span>
+            </div>
+            
+            <span class="label">테마 모드</span>
+            <div class="radio-group">
+                <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
+                <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
+                <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
+            </div>
+
+            <span class="label">포인트 컬러</span>
+            <div class="radio-group">
+                <input type="radio" name="accent" id="acc-blue" value="blue" checked onclick="saveAndApplyTheme()"><label for="acc-blue">Blue</label>
+                <input type="radio" name="accent" id="acc-orange" value="orange" onclick="saveAndApplyTheme()"><label for="acc-orange">Org</label>
+                <input type="radio" name="accent" id="acc-red" value="red" onclick="saveAndApplyTheme()"><label for="acc-red">Red</label>
+                <input type="radio" name="accent" id="acc-magenta" value="magenta" onclick="saveAndApplyTheme()"><label for="acc-magenta">Mag</label>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // 기기 고유 ID 생성 (없을 경우)
+    let deviceId = localStorage.getItem('appDeviceId');
+    if (!deviceId) {
+        deviceId = 'DEV-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('appDeviceId', deviceId);
+    }
+
+    let currentMode = localStorage.getItem('mode') || 'rotation';
+    const RAW_DATA = {
+        lh: [
+            {s:"06:50", e:"07:15", p:"LH"}, {s:"07:20", e:"07:45", p:"휴식"}, {s:"07:50", e:"08:15", p:"RH"}, {s:"08:20", e:"08:50", p:"글라스"},
+            {s:"09:00", e:"09:25", p:"LH"}, {s:"09:30", e:"09:55", p:"휴식"}, {s:"10:00", e:"10:25", p:"RH"}, {s:"10:30", e:"11:00", p:"글라스"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"LH"}, {s:"12:10", e:"12:35", p:"휴식"}, {s:"12:40", e:"13:05", p:"RH"},
+            {s:"13:10", e:"13:40", p:"글라스"}, {s:"13:50", e:"14:10", p:"LH"}, {s:"14:15", e:"14:35", p:"휴식"}, {s:"14:40", e:"15:00", p:"RH"}, {s:"15:05", e:"15:25", p:"글라스"},
+            {s:"15:35", e:"16:05", p:"LH", n:true}, {s:"16:10", e:"16:35", p:"휴식", n:true}, {s:"16:40", e:"17:05", p:"RH", n:true}, {s:"17:10", e:"17:40", p:"글라스", n:true},
+            {s:"17:50", e:"18:15", p:"LH", n:true}, {s:"18:20", e:"18:45", p:"휴식", n:true}, {s:"18:50", e:"19:15", p:"RH", n:true}, {s:"19:20", e:"19:50", p:"글라스", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"LH", n:true}, {s:"21:00", e:"21:25", p:"휴식", n:true}, {s:"21:30", e:"21:55", p:"RH", n:true},
+            {s:"22:00", e:"22:30", p:"글라스", n:true}, {s:"22:40", e:"23:00", p:"LH", n:true}, {s:"23:05", e:"23:25", p:"휴식", n:true}, {s:"23:30", e:"23:50", p:"RH", n:true}, {s:"23:55", e:"00:20", p:"글라스", n:true}
+        ],
+        rest: [
+            {s:"06:50", e:"07:15", p:"휴식"}, {s:"07:20", e:"07:45", p:"RH"}, {s:"07:50", e:"08:15", p:"글라스"}, {s:"08:20", e:"08:50", p:"LH"},
+            {s:"09:00", e:"09:25", p:"휴식"}, {s:"09:30", e:"09:55", p:"RH"}, {s:"10:00", e:"10:25", p:"글라스"}, {s:"10:30", e:"11:00", p:"LH"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"휴식"}, {s:"12:10", e:"12:35", p:"RH"}, {s:"12:40", e:"13:05", p:"글라스"},
+            {s:"13:10", e:"13:40", p:"LH"}, {s:"13:50", e:"14:10", p:"휴식"}, {s:"14:15", e:"14:35", p:"RH"}, {s:"14:40", e:"15:00", p:"글라스"}, {s:"15:05", e:"15:25", p:"LH"},
+            {s:"15:35", e:"16:05", p:"휴식", n:true}, {s:"16:10", e:"16:35", p:"RH", n:true}, {s:"16:40", e:"17:05", p:"글라스", n:true}, {s:"17:10", e:"17:40", p:"LH", n:true},
+            {s:"17:50", e:"18:15", p:"휴식", n:true}, {s:"18:20", e:"18:45", p:"RH", n:true}, {s:"18:50", e:"19:15", p:"글라스", n:true}, {s:"19:20", e:"19:50", p:"LH", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"휴식", n:true}, {s:"21:00", e:"21:25", p:"RH", n:true}, {s:"21:30", e:"21:55", p:"글라스", n:true},
+            {s:"22:00", e:"22:30", p:"LH", n:true}, {s:"22:40", e:"23:00", p:"휴식", n:true}, {s:"23:05", e:"23:25", p:"RH", n:true}, {s:"23:30", e:"23:50", p:"글라스", n:true}, {s:"23:55", e:"00:20", p:"LH", n:true}
+        ],
+        rh: [
+            {s:"06:50", e:"07:15", p:"RH"}, {s:"07:20", e:"07:45", p:"글라스"}, {s:"07:50", e:"08:15", p:"LH"}, {s:"08:20", e:"08:50", p:"휴식"},
+            {s:"09:00", e:"09:25", p:"RH"}, {s:"09:30", e:"09:55", p:"글라스"}, {s:"10:00", e:"10:25", p:"LH"}, {s:"10:30", e:"11:00", p:"휴식"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"RH"}, {s:"12:10", e:"12:35", p:"글라스"}, {s:"12:40", e:"13:05", p:"LH"},
+            {s:"13:10", e:"13:40", p:"휴식"}, {s:"13:50", e:"14:10", p:"RH"}, {s:"14:15", e:"14:35", p:"글라스"}, {s:"14:40", e:"15:00", p:"LH"}, {s:"15:05", e:"15:25", p:"휴식"},
+            {s:"15:35", e:"16:05", p:"RH", n:true}, {s:"16:10", e:"16:35", p:"글라스", n:true}, {s:"16:40", e:"17:05", p:"LH", n:true}, {s:"17:10", e:"17:40", p:"휴식", n:true},
+            {s:"17:50", e:"18:15", p:"RH", n:true}, {s:"18:20", e:"18:45", p:"글라스", n:true}, {s:"18:50", e:"19:15", p:"LH", n:true}, {s:"19:20", e:"19:50", p:"휴식", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"RH", n:true}, {s:"21:00", e:"21:25", p:"글라스", n:true}, {s:"21:30", e:"21:55", p:"LH", n:true},
+            {s:"22:00", e:"22:30", p:"휴식", n:true}, {s:"22:40", e:"23:00", p:"RH", n:true}, {s:"23:05", e:"23:25", p:"글라스", n:true}, {s:"23:30", e:"23:50", p:"LH", n:true}, {s:"23:55", e:"00:20", p:"휴식", n:true}
+        ],
+        glass: [
+            {s:"06:50", e:"07:15", p:"글라스"}, {s:"07:20", e:"07:45", p:"LH"}, {s:"07:50", e:"08:15", p:"휴식"}, {s:"08:20", e:"08:50", p:"RH"},
+            {s:"09:00", e:"09:25", p:"글라스"}, {s:"09:30", e:"09:55", p:"LH"}, {s:"10:00", e:"10:25", p:"휴식"}, {s:"10:30", e:"11:00", p:"RH"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"글라스"}, {s:"12:10", e:"12:35", p:"LH"}, {s:"12:40", e:"13:05", p:"휴식"},
+            {s:"13:10", e:"13:40", p:"RH"}, {s:"13:50", e:"14:10", p:"글라스"}, {s:"14:15", e:"14:35", p:"LH"}, {s:"14:40", e:"15:00", p:"휴식"}, {s:"15:05", e:"15:25", p:"RH"},
+            {s:"15:35", e:"16:05", p:"글라스", n:true}, {s:"16:10", e:"16:35", p:"LH", n:true}, {s:"16:40", e:"17:05", p:"휴식", n:true}, {s:"17:10", e:"17:40", p:"RH", n:true},
+            {s:"17:50", e:"18:15", p:"글라스", n:true}, {s:"18:20", e:"18:45", p:"LH", n:true}, {s:"18:50", e:"19:15", p:"휴식", n:true}, {s:"19:20", e:"19:50", p:"RH", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"글라스", n:true}, {s:"21:00", e:"21:25", p:"LH", n:true}, {s:"21:30", e:"21:55", p:"휴식", n:true},
+            {s:"22:00", e:"22:30", p:"RH", n:true}, {s:"22:40", e:"23:00", p:"글라스", n:true}, {s:"23:05", e:"23:25", p:"LH", n:true}, {s:"23:30", e:"23:50", p:"휴식", n:true}, {s:"23:55", e:"00:20", p:"RH", n:true}
+        ],
+        general: [
+            {s:"06:50", e:"08:50", p:"오전 근무", n:false}, {s:"08:50", e:"09:00", p:"휴식", n:false},
+            {s:"09:00", e:"11:00", p:"오전 근무", n:false}, {s:"11:00", e:"11:40", p:"점심", n:false},
+            {s:"11:40", e:"13:40", p:"오후 근무", n:false}, {s:"13:40", e:"13:50", p:"휴식", n:false},
+            {s:"13:50", e:"15:25", p:"오후 근무", n:false}, {s:"15:35", e:"17:40", p:"야간 근무", n:true},
+            {s:"17:40", e:"17:50", p:"휴식", n:true}, {s:"17:50", e:"19:50", p:"야간 근무", n:true},
+            {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"22:30", p:"심야 근무", n:true},
+            {s:"22:30", e:"22:40", p:"휴식", n:true}, {s:"22:40", e:"00:20", p:"심야 근무", n:true}
+        ]
+    };
+
+    function toggleSettings(show) {
+        document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
+    }
+
+    function saveAndApplyTheme() {
+        const bg = document.querySelector('input[name="bg-mode"]:checked').value;
+        const acc = document.querySelector('input[name="accent"]:checked').value;
+        localStorage.setItem('theme-bg', bg);
+        localStorage.setItem('theme-acc', acc);
+        
+        document.body.className = '';
+        if (bg === 'dark') document.body.classList.add('dark-mode');
+        if (bg === 'oled') document.body.classList.add('oled-mode');
+        document.body.classList.add('theme-' + acc);
+    }
+
+    function loadSavedSettings() {
+        const bg = localStorage.getItem('theme-bg') || 'light';
+        const acc = localStorage.getItem('theme-acc') || 'blue';
+        document.getElementById('bg-' + bg).checked = true;
+        document.getElementById('acc-' + acc).checked = true;
+        saveAndApplyTheme();
+        setMode(currentMode);
+
+        // 공차 계산 데이터 복원
+        document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currCar`) || '';
+        document.getElementById('target-car').value = localStorage.getItem(`${deviceId}_targetCar`) || '';
+        if(localStorage.getItem(`${deviceId}_calcActive`) === 'true') {
+            updateCalcDisplay();
+        }
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        localStorage.setItem('mode', mode);
+        document.getElementById('tab-rotation').classList.toggle('active', mode === 'rotation');
+        document.getElementById('tab-general').classList.toggle('active', mode === 'general');
+        document.getElementById('position-section').style.display = mode === 'rotation' ? 'block' : 'none';
+        
+        // 공차 계산 UI 토글
+        document.getElementById('general-extra').style.display = mode === 'general' ? 'block' : 'none';
+        update();
+    }
+
+    // --- 공차 계산 로직 시작 ---
+    function saveCurrCar() {
+        const curr = document.getElementById('curr-car').value;
+        if(curr) {
+            localStorage.setItem(`${deviceId}_currCar`, curr);
+            alert("현재 차번이 저장되었습니다.");
+            updateCalcDisplay();
+        }
+    }
+
+    function startCalc() {
+        const curr = parseInt(document.getElementById('curr-car').value);
+        const target = parseInt(document.getElementById('target-car').value);
+
+        if (!curr || !target || target <= curr) {
+            alert("차번을 올바르게 입력해주세요. (공바디 번호가 더 커야 합니다)");
+            localStorage.setItem(`${deviceId}_calcActive`, 'false');
+            return;
+        }
+        
+        localStorage.setItem(`${deviceId}_currCar`, curr);
+        localStorage.setItem(`${deviceId}_targetCar`, target);
+        localStorage.setItem(`${deviceId}_calcActive`, 'true');
+        updateCalcDisplay();
+    }
+
+    function updateCalcDisplay() {
+        if (localStorage.getItem(`${deviceId}_calcActive`) !== 'true') {
+            document.getElementById('calc-result').innerHTML = "차번을 입력하고 계산을 눌러주세요.";
+            return;
+        }
+        
+        const curr = parseInt(localStorage.getItem(`${deviceId}_currCar`));
+        const target = parseInt(localStorage.getItem(`${deviceId}_targetCar`));
+        if (!curr || !target) return;
+
+        const diff = target - curr;
+        const minsPerCar = 10 / 6.5; // 차량 1대당 소요 시간 (약 1.538분)
+        let remainingWorkMins = diff * minsPerCar;
+
+        let now = new Date();
+        let simulatedMins = now.getHours() * 60 + now.getMinutes();
+        let startMins = simulatedMins;
+
+        // 휴게 시간 스킵 로직 적용
+        while (remainingWorkMins > 0) {
+            let inBreak = false;
+            // 점심 정지 시간: 11:00 (660분) ~ 11:40 (700분)
+            if (simulatedMins >= 660 && simulatedMins < 700) {
+                simulatedMins = 700;
+                inBreak = true;
+            }
+            // 저녁 정지 시간: 19:50 (1190분) ~ 20:30 (1230분)
+            else if (simulatedMins >= 1190 && simulatedMins < 1230) {
+                simulatedMins = 1230;
+                inBreak = true;
+            }
+
+            if (!inBreak) {
+                simulatedMins++;
+                remainingWorkMins--;
+            }
+        }
+
+        const realRemainingMins = Math.round(simulatedMins - startMins);
+        let finalDate = new Date(now.getTime() + realRemainingMins * 60000);
+        let fh = String(finalDate.getHours()).padStart(2, '0');
+        let fm = String(finalDate.getMinutes()).padStart(2, '0');
+
+        document.getElementById('calc-result').innerHTML = 
+            `현재 차번은 <b>${curr}</b> 이며 <b>${target}</b> 까지는 <b>${realRemainingMins}</b>분이 남았습니다.<br>
+            <span style="color:var(--primary); font-size:16px; margin-top:5px; display:inline-block; font-weight:800;">공바디 도착 예상시간은 ${fh}:${fm} 분입니다.</span>`;
+    }
+    // --- 공차 계산 로직 종료 ---
+
+    function update() {
+        const now = new Date();
+        const clockStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0') + ":" + now.getSeconds().toString().padStart(2,'0');
+        document.getElementById('realtime-clock').innerText = clockStr;
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const nowSec = now.getSeconds();
+        const isNight = document.querySelector('input[name="shift"]:checked').checked && document.querySelector('input[name="shift"]:checked').value === "night";
+        const shiftVal = document.querySelector('input[name="shift"]:checked').value;
+        let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[document.querySelector('input[name="pos"]:checked').value];
+        const currentSchedule = targetData.filter(item => shiftVal === "night" ? item.n : !item.n);
+
+        let checkMin = nowMin;
+        if (shiftVal === "night" && nowMin < 360) checkMin += 1440;
+        currentSchedule.forEach(item => {
+            let [sh, sm] = item.s.split(':').map(Number);
+            let [eh, em] = item.e.split(':').map(Number);
+            let start = sh * 60 + sm;
+            let end = eh * 60 + em;
+            if (shiftVal === "night" && start < 360) start += 1440;
+            if (shiftVal === "night" && end < 360) end += 1440;
+            if (end < start) end += 1440;
+            item._start = start; item._end = end;
+        });
+        const label = document.getElementById('countdown-label');
+        const timer = document.getElementById('timer-text');
+        const task = document.getElementById('current-task');
+
+        const firstShift = currentSchedule[0];
+        const lastShift = currentSchedule[currentSchedule.length - 1];
+        
+        if (checkMin < firstShift._start || checkMin >= lastShift._end) {
+            timer.innerText = "--:--";
+            label.innerText = "OFF"; 
+            task.innerText = "퇴근입니다. 오늘 하루도 고생 많으셨습니다."; // 요청하신 퇴근 문구 변경 반영
+            renderList(currentSchedule, null); return;
+        }
+
+        let currentShift = currentSchedule.find(i => checkMin >= i._start && checkMin < i._end);
+        let nextIdx = currentSchedule.findIndex(i => checkMin >= i._start && checkMin < i._end) + 1;
+        let nextShift = currentSchedule[nextIdx];
+        if (currentShift) {
+            let diffSec = (currentShift._end * 60) - (checkMin * 60 + nowSec);
+            timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
+            
+            if (currentMode === 'general') {
+                if (currentShift.p.includes("점심") || currentShift.p.includes("저녁") || currentShift.p.includes("휴식")) {
+                    label.innerText = "다음 근무 시작까지";
+                    task.innerText = `${currentShift.p} 시간 (${currentShift.s}~${currentShift.e})`;
+                } else {
+                    if (diffSec <= 600 && nextShift) {
+                        if (nextShift.p.includes("점심") || nextShift.p.includes("저녁")) label.innerText = "곧 식사 시간입니다";
+                        else if (nextShift.p.includes("휴식")) label.innerText = "곧 쉬는 시간입니다";
+                        else label.innerText = "다음 근무 시작까지";
+                    } else {
+                        label.innerText = "다음 근무 시작까지";
+                    }
+                    task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
+                }
+            } else {
+                label.innerText = "남은 교대까지";
+                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
+            }
+        }
+        renderList(currentSchedule, currentShift);
+        
+        // 실시간(1분 단위 연동) 공차 계산 업데이트
+        if(currentMode === 'general') {
+            updateCalcDisplay();
+        }
+    }
+
+    function renderList(list, currentShift) {
+        const listDiv = document.getElementById('schedule-list');
+        listDiv.innerHTML = list.map(item => `
+            <div class="schedule-item ${currentShift && item.s === currentShift.s ? 'active-now' : ''}">
+                <span>${item.s} ~ ${item.e}</span>
+                <span>${item.p}</span>
+            </div>
+        `).join('');
+    }
+
+    document.querySelectorAll('input').forEach(input => input.addEventListener('change', update));
+    window.onload = loadSavedSettings;
+    setInterval(update, 1000);
+</script>
+</body>
+</html>
