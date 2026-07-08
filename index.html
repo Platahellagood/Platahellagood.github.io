@@ -90,6 +90,14 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
         .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
 
+        /* 계산 결과 커스텀 알림 팝업 */
+        #custom-alert {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+        }
+        .alert-content { background: var(--card); width: 80%; max-width: 320px; border-radius: 24px; padding: 30px 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); text-align: center; }
+        .alert-msg { font-size: 16px; line-height: 1.6; font-weight: 600; color: var(--text); word-break: keep-all; }
+
         /* 🖥️ 태블릿 모드 (DPI 스케일업) */
         body.tablet-mode { padding: 40px; }
         body.tablet-mode .container { max-width: 768px; }
@@ -104,8 +112,9 @@
         body.tablet-mode .calc-input { font-size: 18px; padding: 16px; }
         body.tablet-mode .calc-btn-sub, body.tablet-mode .calc-btn-main { font-size: 16px; padding: 0 25px; }
         body.tablet-mode .calc-result-box { font-size: 18px; padding: 25px; }
-        body.tablet-mode .modal-content { max-width: 450px; padding: 35px; }
+        body.tablet-mode .modal-content, body.tablet-mode .alert-content { max-width: 450px; padding: 35px; }
         body.tablet-mode .modal-header { font-size: 22px; }
+        body.tablet-mode .alert-msg { font-size: 20px; }
     </style>
 </head>
 <body class="theme-blue">
@@ -196,6 +205,13 @@
         </div>
     </div>
 
+    <div id="custom-alert" onclick="if(event.target == this) this.style.display='none'">
+        <div class="alert-content">
+            <div class="alert-msg" id="alert-msg-text"></div>
+            <button class="calc-btn-main" onclick="document.getElementById('custom-alert').style.display='none'" style="width:100%; margin-top:20px; padding:15px; font-size:16px;">확인</button>
+        </div>
+    </div>
+
 <script>
     let deviceId = localStorage.getItem('appDeviceId');
     if (!deviceId) {
@@ -205,7 +221,6 @@
 
     let currentMode = localStorage.getItem('mode') || 'rotation';
     
-    // 휴게시간(공식)과 휴식(로테이션 대기), 점심/저녁 명확히 구분 & 교대시간 5분 Gap 처리됨
     const RAW_DATA = {
         lh: [
             {s:"06:50", e:"07:15", p:"LH"}, {s:"07:20", e:"07:45", p:"휴식"}, {s:"07:50", e:"08:15", p:"RH"}, {s:"08:20", e:"08:50", p:"글라스"},
@@ -215,7 +230,6 @@
             {s:"13:10", e:"13:40", p:"글라스"}, 
             {s:"13:40", e:"13:50", p:"휴게시간"},
             {s:"13:50", e:"14:10", p:"LH"}, {s:"14:15", e:"14:35", p:"휴식"}, {s:"14:40", e:"15:00", p:"RH"}, {s:"15:05", e:"15:25", p:"글라스"},
-            
             {s:"15:35", e:"16:05", p:"LH", n:true}, {s:"16:10", e:"16:35", p:"휴식", n:true}, {s:"16:40", e:"17:05", p:"RH", n:true}, {s:"17:10", e:"17:40", p:"글라스", n:true},
             {s:"17:40", e:"17:50", p:"휴게시간", n:true},
             {s:"17:50", e:"18:15", p:"LH", n:true}, {s:"18:20", e:"18:45", p:"휴식", n:true}, {s:"18:50", e:"19:15", p:"RH", n:true}, {s:"19:20", e:"19:50", p:"글라스", n:true},
@@ -232,7 +246,6 @@
             {s:"13:10", e:"13:40", p:"LH"},
             {s:"13:40", e:"13:50", p:"휴게시간"},
             {s:"13:50", e:"14:10", p:"휴식"}, {s:"14:15", e:"14:35", p:"RH"}, {s:"14:40", e:"15:00", p:"글라스"}, {s:"15:05", e:"15:25", p:"LH"},
-            
             {s:"15:35", e:"16:05", p:"휴식", n:true}, {s:"16:10", e:"16:35", p:"RH", n:true}, {s:"16:40", e:"17:05", p:"글라스", n:true}, {s:"17:10", e:"17:40", p:"LH", n:true},
             {s:"17:40", e:"17:50", p:"휴게시간", n:true},
             {s:"17:50", e:"18:15", p:"휴식", n:true}, {s:"18:20", e:"18:45", p:"RH", n:true}, {s:"18:50", e:"19:15", p:"글라스", n:true}, {s:"19:20", e:"19:50", p:"LH", n:true},
@@ -249,7 +262,6 @@
             {s:"13:10", e:"13:40", p:"휴식"},
             {s:"13:40", e:"13:50", p:"휴게시간"},
             {s:"13:50", e:"14:10", p:"RH"}, {s:"14:15", e:"14:35", p:"글라스"}, {s:"14:40", e:"15:00", p:"LH"}, {s:"15:05", e:"15:25", p:"휴식"},
-            
             {s:"15:35", e:"16:05", p:"RH", n:true}, {s:"16:10", e:"16:35", p:"글라스", n:true}, {s:"16:40", e:"17:05", p:"LH", n:true}, {s:"17:10", e:"17:40", p:"휴식", n:true},
             {s:"17:40", e:"17:50", p:"휴게시간", n:true},
             {s:"17:50", e:"18:15", p:"RH", n:true}, {s:"18:20", e:"18:45", p:"글라스", n:true}, {s:"18:50", e:"19:15", p:"LH", n:true}, {s:"19:20", e:"19:50", p:"휴식", n:true},
@@ -266,7 +278,6 @@
             {s:"13:10", e:"13:40", p:"RH"},
             {s:"13:40", e:"13:50", p:"휴게시간"},
             {s:"13:50", e:"14:10", p:"글라스"}, {s:"14:15", e:"14:35", p:"LH"}, {s:"14:40", e:"15:00", p:"휴식"}, {s:"15:05", e:"15:25", p:"RH"},
-            
             {s:"15:35", e:"16:05", p:"글라스", n:true}, {s:"16:10", e:"16:35", p:"LH", n:true}, {s:"16:40", e:"17:05", p:"휴식", n:true}, {s:"17:10", e:"17:40", p:"RH", n:true},
             {s:"17:40", e:"17:50", p:"휴게시간", n:true},
             {s:"17:50", e:"18:15", p:"글라스", n:true}, {s:"18:20", e:"18:45", p:"LH", n:true}, {s:"18:50", e:"19:15", p:"휴식", n:true}, {s:"19:20", e:"19:50", p:"RH", n:true},
@@ -289,6 +300,11 @@
 
     function toggleSettings(show) {
         document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
+    }
+
+    function showCustomAlert(msg) {
+        document.getElementById('alert-msg-text').innerHTML = msg;
+        document.getElementById('custom-alert').style.display = 'flex';
     }
 
     function saveAndApplyTheme() {
@@ -318,10 +334,10 @@
         saveAndApplyTheme();
         setMode(currentMode);
 
-        document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currCar`) || '';
-        document.getElementById('target-car').value = localStorage.getItem(`${deviceId}_targetCar`) || '';
         if(localStorage.getItem(`${deviceId}_calcActive`) === 'true') {
-            updateCalcDisplay();
+            document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currDisplay`) || localStorage.getItem(`${deviceId}_initCurrCar`);
+            document.getElementById('target-car').value = localStorage.getItem(`${deviceId}_targetCar`) || '';
+            runCalc(false);
         }
     }
 
@@ -335,13 +351,13 @@
         update();
     }
 
-    // 공차 계산 로직 
+    // --- 공차 계산 실시간 연동 로직 ---
     function saveCurrCar() {
-        const curr = document.getElementById('curr-car').value;
+        const curr = parseInt(document.getElementById('curr-car').value);
         if(curr) {
-            localStorage.setItem(`${deviceId}_currCar`, curr);
-            alert("현재 차번이 저장되었습니다.");
-            updateCalcDisplay();
+            localStorage.setItem(`${deviceId}_initCurrCar`, curr);
+            localStorage.setItem(`${deviceId}_calcStartMs`, Date.now());
+            runCalc(false);
         }
     }
 
@@ -350,56 +366,105 @@
         const target = parseInt(document.getElementById('target-car').value);
 
         if (!curr || !target || target <= curr) {
-            alert("차번을 올바르게 입력해주세요. (공바디 번호가 더 커야 합니다)");
+            showCustomAlert("차번을 올바르게 입력해주세요.<br><br><span style='font-size:14px; color:var(--secondary);'>공바디 번호가 더 커야 합니다.</span>");
             localStorage.setItem(`${deviceId}_calcActive`, 'false');
             return;
         }
         
-        localStorage.setItem(`${deviceId}_currCar`, curr);
+        localStorage.setItem(`${deviceId}_initCurrCar`, curr);
         localStorage.setItem(`${deviceId}_targetCar`, target);
+        localStorage.setItem(`${deviceId}_calcStartMs`, Date.now());
         localStorage.setItem(`${deviceId}_calcActive`, 'true');
-        updateCalcDisplay();
+        runCalc(true);
     }
 
-    function updateCalcDisplay() {
-        if (localStorage.getItem(`${deviceId}_calcActive`) !== 'true') {
-            document.getElementById('calc-result').innerHTML = "차번을 입력하고 계산을 눌러주세요.";
-            return;
-        }
-        
-        const curr = parseInt(localStorage.getItem(`${deviceId}_currCar`));
+    function runCalc(showPopup = false) {
+        if (localStorage.getItem(`${deviceId}_calcActive`) !== 'true') return;
+
+        const initCurr = parseInt(localStorage.getItem(`${deviceId}_initCurrCar`));
         const target = parseInt(localStorage.getItem(`${deviceId}_targetCar`));
-        if (!curr || !target) return;
+        const startMs = parseInt(localStorage.getItem(`${deviceId}_calcStartMs`));
+        
+        if (!initCurr || !target || !startMs) return;
 
-        const diff = target - curr;
-        const minsPerCar = 10 / 6.5; 
-        let remainingWorkMins = diff * minsPerCar;
+        const nowMs = Date.now();
+        const startObj = new Date(startMs);
+        const startMinsOfDay = startObj.getHours() * 60 + startObj.getMinutes();
+        
+        // 정지 시간표
+        const breaks = [
+            {n: '오전 휴게시간', s: 530, e: 540},
+            {n: '점심시간', s: 660, e: 700},
+            {n: '오후 휴게시간', s: 820, e: 830},
+            {n: '야간 휴게시간', s: 1060, e: 1070},
+            {n: '저녁시간', s: 1190, e: 1230},
+            {n: '심야 휴게시간', s: 1350, e: 1360}
+        ];
 
-        let now = new Date();
-        let simulatedMins = now.getHours() * 60 + now.getMinutes();
-        let startMins = simulatedMins;
+        // 1. 초기 기록 기준 도착 시간(ETA) 계산
+        let totalWorkMins = (target - initCurr) * (10 / 6.5);
+        let simMins = startMinsOfDay;
+        let breaksEncountered = new Set();
+        let remWork = totalWorkMins;
 
-        // 휴게시간 스킵 
-        while (remainingWorkMins > 0) {
+        while(remWork > 0) {
+            let dayMin = simMins % 1440;
             let inBreak = false;
-            if (simulatedMins >= 530 && simulatedMins < 540) { simulatedMins = 540; inBreak = true; } // 08:50 ~ 09:00
-            else if (simulatedMins >= 660 && simulatedMins < 700) { simulatedMins = 700; inBreak = true; } // 점심
-            else if (simulatedMins >= 820 && simulatedMins < 830) { simulatedMins = 830; inBreak = true; } // 13:40 ~ 13:50
-            else if (simulatedMins >= 1060 && simulatedMins < 1070) { simulatedMins = 1070; inBreak = true; } // 17:40 ~ 17:50
-            else if (simulatedMins >= 1190 && simulatedMins < 1230) { simulatedMins = 1230; inBreak = true; } // 저녁
-            else if (simulatedMins >= 1350 && simulatedMins < 1360) { simulatedMins = 1360; inBreak = true; } // 22:30 ~ 22:40
-
-            if (!inBreak) { simulatedMins++; remainingWorkMins--; }
+            for (let b of breaks) {
+                if (dayMin >= b.s && dayMin < b.e) {
+                    breaksEncountered.add(b.n);
+                    inBreak = true; break;
+                }
+            }
+            simMins++;
+            if (!inBreak) remWork--;
         }
 
-        const realRemainingMins = Math.round(simulatedMins - startMins);
-        let finalDate = new Date(now.getTime() + realRemainingMins * 60000);
-        let fh = String(finalDate.getHours()).padStart(2, '0');
-        let fm = String(finalDate.getMinutes()).padStart(2, '0');
+        const realElapsedTotalMins = Math.round(simMins - startMinsOfDay);
+        const etaObj = new Date(startMs + realElapsedTotalMins * 60000);
+        const fh = String(etaObj.getHours()).padStart(2, '0');
+        const fm = String(etaObj.getMinutes()).padStart(2, '0');
 
+        // 2. 10분 경과 시 현재 예상 차번 자동 추적
+        let currentAutoCar = initCurr;
+        let elapsedWorkMins = 0;
+        let minDiff = Math.floor((nowMs - startMs) / 60000);
+
+        if (minDiff > 0) {
+            for (let i = 0; i < minDiff; i++) {
+                let dayMin = (startMinsOfDay + i) % 1440;
+                let inBreak = false;
+                for (let b of breaks) {
+                    if (dayMin >= b.s && dayMin < b.e) { inBreak = true; break; }
+                }
+                if (!inBreak) elapsedWorkMins++;
+            }
+        }
+
+        // 입력 후 10분이 지났다면, 사용자가 입력창을 누르고 있지 않을 때만 숫자 업데이트
+        if (minDiff >= 10) {
+            currentAutoCar = initCurr + Math.floor(elapsedWorkMins / (10 / 6.5));
+            localStorage.setItem(`${deviceId}_currDisplay`, currentAutoCar); // 표시용 임시 저장
+            
+            const currInput = document.getElementById('curr-car');
+            if (document.activeElement !== currInput) {
+                currInput.value = currentAutoCar;
+            }
+        }
+
+        // 3. UI 업데이트
+        let remainingRealMins = Math.max(0, Math.floor((etaObj.getTime() - nowMs) / 60000));
         document.getElementById('calc-result').innerHTML = 
-            `현재 차번은 <b>${curr}</b> 이며 <b>${target}</b> 까지는 <b>${realRemainingMins}</b>분이 남았습니다.<br>
+            `현재 진행 차번은 약 <b>${currentAutoCar}</b> 이며 <b>${target}</b> 까지는 <b>${remainingRealMins}</b>분이 남았습니다.<br>
             <span style="color:var(--primary); font-size:16px; margin-top:5px; display:inline-block; font-weight:800;">공바디 도착 예상시간은 ${fh}:${fm} 분입니다.</span>`;
+
+        // 4. 팝업 호출 (계산 버튼을 눌렀을 때만)
+        if (showPopup) {
+            let bArr = Array.from(breaksEncountered);
+            let bStr = bArr.length > 0 ? `<span style="color:var(--secondary); font-size:14px;">(${bArr.join(', ')} 제외)</span><br><br>해당 시간을 제외하고 계산했을 때,` : '휴게시간 간섭 없이 계산했을 때,';
+            let msg = `${bStr}<br><span style="font-size:26px; font-weight:900; color:var(--primary); margin-top:10px; display:inline-block;">도착 예상시간은 ${fh}:${fm} 입니다.</span>`;
+            showCustomAlert(msg);
+        }
     }
 
     function update() {
@@ -408,7 +473,6 @@
         document.getElementById('realtime-clock').innerText = clockStr;
         const nowMin = now.getHours() * 60 + now.getMinutes();
         const nowSec = now.getSeconds();
-        const isNight = document.querySelector('input[name="shift"]:checked').checked && document.querySelector('input[name="shift"]:checked').value === "night";
         const shiftVal = document.querySelector('input[name="shift"]:checked').value;
         let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[document.querySelector('input[name="pos"]:checked').value];
         const currentSchedule = targetData.filter(item => shiftVal === "night" ? item.n : !item.n);
@@ -442,7 +506,6 @@
             let diffSec = (currentShift._end * 60) - (checkMin * 60 + nowSec);
             timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
             
-            // 점심/저녁 vs 휴게시간 vs 일반 휴식 엄격히 구분
             if (currentShift.p === "점심" || currentShift.p === "저녁") {
                 label.innerText = "식사시간입니다.";
                 task.innerText = "식사 맛있게 하십시오.";
@@ -463,7 +526,6 @@
                 task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
             }
         } else if (nextShift && checkMin >= firstShift._start && checkMin < lastShift._end) {
-            // 표에 등록되지 않은 5분 빈 공간 (교대시간 Gap 처리)
             let diffSec = (nextShift._start * 60) - (checkMin * 60 + nowSec);
             timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
             
@@ -475,14 +537,13 @@
                 task.innerText = `다음 일정: ${nextShift.p}`;
             }
         } else {
-            // 하루 일과 종료 또는 시작 전
             timer.innerText = "--:--";
             label.innerText = "OFF"; 
             task.innerText = "퇴근입니다. 오늘 하루도 고생 많으셨습니다.";
         }
 
         renderList(currentSchedule, currentShift);
-        if(currentMode === 'general') updateCalcDisplay();
+        if(currentMode === 'general') runCalc(false);
     }
 
     function renderList(list, currentShift) {
