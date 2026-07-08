@@ -182,52 +182,79 @@
     }
 
     let currentMode = localStorage.getItem('mode') || 'rotation';
+    
+    // 휴게시간이 명시적으로 추가된 데이터셋
     const RAW_DATA = {
         lh: [
             {s:"06:50", e:"07:15", p:"LH"}, {s:"07:20", e:"07:45", p:"휴식"}, {s:"07:50", e:"08:15", p:"RH"}, {s:"08:20", e:"08:50", p:"글라스"},
+            {s:"08:50", e:"09:00", p:"휴식"},
             {s:"09:00", e:"09:25", p:"LH"}, {s:"09:30", e:"09:55", p:"휴식"}, {s:"10:00", e:"10:25", p:"RH"}, {s:"10:30", e:"11:00", p:"글라스"},
             {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"LH"}, {s:"12:10", e:"12:35", p:"휴식"}, {s:"12:40", e:"13:05", p:"RH"},
-            {s:"13:10", e:"13:40", p:"글라스"}, {s:"13:50", e:"14:10", p:"LH"}, {s:"14:15", e:"14:35", p:"휴식"}, {s:"14:40", e:"15:00", p:"RH"}, {s:"15:05", e:"15:25", p:"글라스"},
+            {s:"13:10", e:"13:40", p:"글라스"}, 
+            {s:"13:40", e:"13:50", p:"휴식"},
+            {s:"13:50", e:"14:10", p:"LH"}, {s:"14:15", e:"14:35", p:"휴식"}, {s:"14:40", e:"15:00", p:"RH"}, {s:"15:05", e:"15:25", p:"글라스"},
             {s:"15:35", e:"16:05", p:"LH", n:true}, {s:"16:10", e:"16:35", p:"휴식", n:true}, {s:"16:40", e:"17:05", p:"RH", n:true}, {s:"17:10", e:"17:40", p:"글라스", n:true},
+            {s:"17:40", e:"17:50", p:"휴식", n:true},
             {s:"17:50", e:"18:15", p:"LH", n:true}, {s:"18:20", e:"18:45", p:"휴식", n:true}, {s:"18:50", e:"19:15", p:"RH", n:true}, {s:"19:20", e:"19:50", p:"글라스", n:true},
             {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"LH", n:true}, {s:"21:00", e:"21:25", p:"휴식", n:true}, {s:"21:30", e:"21:55", p:"RH", n:true},
-            {s:"22:00", e:"22:30", p:"글라스", n:true}, {s:"22:40", e:"23:00", p:"LH", n:true}, {s:"23:05", e:"23:25", p:"휴식", n:true}, {s:"23:30", e:"23:50", p:"RH", n:true}, {s:"23:55", e:"00:20", p:"글라스", n:true}
+            {s:"22:00", e:"22:30", p:"글라스", n:true},
+            {s:"22:30", e:"22:40", p:"휴식", n:true},
+            {s:"22:40", e:"23:00", p:"LH", n:true}, {s:"23:05", e:"23:25", p:"휴식", n:true}, {s:"23:30", e:"23:50", p:"RH", n:true}, {s:"23:55", e:"00:20", p:"글라스", n:true}
         ],
         rest: [
             {s:"06:50", e:"07:15", p:"휴식"}, {s:"07:20", e:"07:45", p:"RH"}, {s:"07:50", e:"08:15", p:"글라스"}, {s:"08:20", e:"08:50", p:"LH"},
+            {s:"08:50", e:"09:00", p:"휴식"},
             {s:"09:00", e:"09:25", p:"휴식"}, {s:"09:30", e:"09:55", p:"RH"}, {s:"10:00", e:"10:25", p:"글라스"}, {s:"10:30", e:"11:00", p:"LH"},
             {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"휴식"}, {s:"12:10", e:"12:35", p:"RH"}, {s:"12:40", e:"13:05", p:"글라스"},
-            {s:"13:10", e:"13:40", p:"LH"}, {s:"13:50", e:"14:10", p:"휴식"}, {s:"14:15", e:"14:35", p:"RH"}, {s:"14:40", e:"15:00", p:"글라스"}, {s:"15:05", e:"15:25", p:"LH"},
+            {s:"13:10", e:"13:40", p:"LH"},
+            {s:"13:40", e:"13:50", p:"휴식"},
+            {s:"13:50", e:"14:10", p:"휴식"}, {s:"14:15", e:"14:35", p:"RH"}, {s:"14:40", e:"15:00", p:"글라스"}, {s:"15:05", e:"15:25", p:"LH"},
             {s:"15:35", e:"16:05", p:"휴식", n:true}, {s:"16:10", e:"16:35", p:"RH", n:true}, {s:"16:40", e:"17:05", p:"글라스", n:true}, {s:"17:10", e:"17:40", p:"LH", n:true},
+            {s:"17:40", e:"17:50", p:"휴식", n:true},
             {s:"17:50", e:"18:15", p:"휴식", n:true}, {s:"18:20", e:"18:45", p:"RH", n:true}, {s:"18:50", e:"19:15", p:"글라스", n:true}, {s:"19:20", e:"19:50", p:"LH", n:true},
             {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"휴식", n:true}, {s:"21:00", e:"21:25", p:"RH", n:true}, {s:"21:30", e:"21:55", p:"글라스", n:true},
-            {s:"22:00", e:"22:30", p:"LH", n:true}, {s:"22:40", e:"23:00", p:"휴식", n:true}, {s:"23:05", e:"23:25", p:"RH", n:true}, {s:"23:30", e:"23:50", p:"글라스", n:true}, {s:"23:55", e:"00:20", p:"LH", n:true}
+            {s:"22:00", e:"22:30", p:"LH", n:true},
+            {s:"22:30", e:"22:40", p:"휴식", n:true},
+            {s:"22:40", e:"23:00", p:"휴식", n:true}, {s:"23:05", e:"23:25", p:"RH", n:true}, {s:"23:30", e:"23:50", p:"글라스", n:true}, {s:"23:55", e:"00:20", p:"LH", n:true}
         ],
         rh: [
             {s:"06:50", e:"07:15", p:"RH"}, {s:"07:20", e:"07:45", p:"글라스"}, {s:"07:50", e:"08:15", p:"LH"}, {s:"08:20", e:"08:50", p:"휴식"},
+            {s:"08:50", e:"09:00", p:"휴식"},
             {s:"09:00", e:"09:25", p:"RH"}, {s:"09:30", e:"09:55", p:"글라스"}, {s:"10:00", e:"10:25", p:"LH"}, {s:"10:30", e:"11:00", p:"휴식"},
             {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"RH"}, {s:"12:10", e:"12:35", p:"글라스"}, {s:"12:40", e:"13:05", p:"LH"},
-            {s:"13:10", e:"13:40", p:"휴식"}, {s:"13:50", e:"14:10", p:"RH"}, {s:"14:15", e:"14:35", p:"글라스"}, {s:"14:40", e:"15:00", p:"LH"}, {s:"15:05", e:"15:25", p:"휴식"},
+            {s:"13:10", e:"13:40", p:"휴식"},
+            {s:"13:40", e:"13:50", p:"휴식"},
+            {s:"13:50", e:"14:10", p:"RH"}, {s:"14:15", e:"14:35", p:"글라스"}, {s:"14:40", e:"15:00", p:"LH"}, {s:"15:05", e:"15:25", p:"휴식"},
             {s:"15:35", e:"16:05", p:"RH", n:true}, {s:"16:10", e:"16:35", p:"글라스", n:true}, {s:"16:40", e:"17:05", p:"LH", n:true}, {s:"17:10", e:"17:40", p:"휴식", n:true},
+            {s:"17:40", e:"17:50", p:"휴식", n:true},
             {s:"17:50", e:"18:15", p:"RH", n:true}, {s:"18:20", e:"18:45", p:"글라스", n:true}, {s:"18:50", e:"19:15", p:"LH", n:true}, {s:"19:20", e:"19:50", p:"휴식", n:true},
             {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"RH", n:true}, {s:"21:00", e:"21:25", p:"글라스", n:true}, {s:"21:30", e:"21:55", p:"LH", n:true},
-            {s:"22:00", e:"22:30", p:"휴식", n:true}, {s:"22:40", e:"23:00", p:"RH", n:true}, {s:"23:05", e:"23:25", p:"글라스", n:true}, {s:"23:30", e:"23:50", p:"LH", n:true}, {s:"23:55", e:"00:20", p:"휴식", n:true}
+            {s:"22:00", e:"22:30", p:"휴식", n:true},
+            {s:"22:30", e:"22:40", p:"휴식", n:true},
+            {s:"22:40", e:"23:00", p:"RH", n:true}, {s:"23:05", e:"23:25", p:"글라스", n:true}, {s:"23:30", e:"23:50", p:"LH", n:true}, {s:"23:55", e:"00:20", p:"휴식", n:true}
         ],
         glass: [
             {s:"06:50", e:"07:15", p:"글라스"}, {s:"07:20", e:"07:45", p:"LH"}, {s:"07:50", e:"08:15", p:"휴식"}, {s:"08:20", e:"08:50", p:"RH"},
+            {s:"08:50", e:"09:00", p:"휴식"},
             {s:"09:00", e:"09:25", p:"글라스"}, {s:"09:30", e:"09:55", p:"LH"}, {s:"10:00", e:"10:25", p:"휴식"}, {s:"10:30", e:"11:00", p:"RH"},
             {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"글라스"}, {s:"12:10", e:"12:35", p:"LH"}, {s:"12:40", e:"13:05", p:"휴식"},
-            {s:"13:10", e:"13:40", p:"RH"}, {s:"13:50", e:"14:10", p:"글라스"}, {s:"14:15", e:"14:35", p:"LH"}, {s:"14:40", e:"15:00", p:"휴식"}, {s:"15:05", e:"15:25", p:"RH"},
+            {s:"13:10", e:"13:40", p:"RH"},
+            {s:"13:40", e:"13:50", p:"휴식"},
+            {s:"13:50", e:"14:10", p:"글라스"}, {s:"14:15", e:"14:35", p:"LH"}, {s:"14:40", e:"15:00", p:"휴식"}, {s:"15:05", e:"15:25", p:"RH"},
             {s:"15:35", e:"16:05", p:"글라스", n:true}, {s:"16:10", e:"16:35", p:"LH", n:true}, {s:"16:40", e:"17:05", p:"휴식", n:true}, {s:"17:10", e:"17:40", p:"RH", n:true},
+            {s:"17:40", e:"17:50", p:"휴식", n:true},
             {s:"17:50", e:"18:15", p:"글라스", n:true}, {s:"18:20", e:"18:45", p:"LH", n:true}, {s:"18:50", e:"19:15", p:"휴식", n:true}, {s:"19:20", e:"19:50", p:"RH", n:true},
             {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"글라스", n:true}, {s:"21:00", e:"21:25", p:"LH", n:true}, {s:"21:30", e:"21:55", p:"휴식", n:true},
-            {s:"22:00", e:"22:30", p:"RH", n:true}, {s:"22:40", e:"23:00", p:"글라스", n:true}, {s:"23:05", e:"23:25", p:"LH", n:true}, {s:"23:30", e:"23:50", p:"휴식", n:true}, {s:"23:55", e:"00:20", p:"RH", n:true}
+            {s:"22:00", e:"22:30", p:"RH", n:true},
+            {s:"22:30", e:"22:40", p:"휴식", n:true},
+            {s:"22:40", e:"23:00", p:"글라스", n:true}, {s:"23:05", e:"23:25", p:"LH", n:true}, {s:"23:30", e:"23:50", p:"휴식", n:true}, {s:"23:55", e:"00:20", p:"RH", n:true}
         ],
         general: [
             {s:"06:50", e:"08:50", p:"오전 근무", n:false}, {s:"08:50", e:"09:00", p:"휴식", n:false},
             {s:"09:00", e:"11:00", p:"오전 근무", n:false}, {s:"11:00", e:"11:40", p:"점심", n:false},
             {s:"11:40", e:"13:40", p:"오후 근무", n:false}, {s:"13:40", e:"13:50", p:"휴식", n:false},
-            {s:"13:50", e:"15:25", p:"오후 근무", n:false}, {s:"15:35", e:"17:40", p:"야간 근무", n:true},
+            {s:"13:50", e:"15:25", p:"오후 근무", n:false}, 
+            {s:"15:35", e:"17:40", p:"야간 근무", n:true},
             {s:"17:40", e:"17:50", p:"휴식", n:true}, {s:"17:50", e:"19:50", p:"야간 근무", n:true},
             {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"22:30", p:"심야 근무", n:true},
             {s:"22:30", e:"22:40", p:"휴식", n:true}, {s:"22:40", e:"00:20", p:"심야 근무", n:true}
@@ -278,7 +305,7 @@
         update();
     }
 
-    // --- 공차 계산 로직 시작 ---
+    // --- 공차 계산 로직 (수정됨: 4개의 휴게시간 정지 반영) ---
     function saveCurrCar() {
         const curr = document.getElementById('curr-car').value;
         if(curr) {
@@ -322,19 +349,22 @@
         let simulatedMins = now.getHours() * 60 + now.getMinutes();
         let startMins = simulatedMins;
 
-        // 휴게 시간 스킵 로직 적용
+        // 휴게 시간 스킵 로직 적용 (요청하신 시간대 모두 포함)
         while (remainingWorkMins > 0) {
             let inBreak = false;
-            // 점심 정지 시간: 11:00 (660분) ~ 11:40 (700분)
-            if (simulatedMins >= 660 && simulatedMins < 700) {
-                simulatedMins = 700;
-                inBreak = true;
-            }
-            // 저녁 정지 시간: 19:50 (1190분) ~ 20:30 (1230분)
-            else if (simulatedMins >= 1190 && simulatedMins < 1230) {
-                simulatedMins = 1230;
-                inBreak = true;
-            }
+            
+            // 오전 휴게시간: 08:50 (530분) ~ 09:00 (540분)
+            if (simulatedMins >= 530 && simulatedMins < 540) { simulatedMins = 540; inBreak = true; }
+            // 점심 정지시간: 11:00 (660분) ~ 11:40 (700분)
+            else if (simulatedMins >= 660 && simulatedMins < 700) { simulatedMins = 700; inBreak = true; }
+            // 오후 휴게시간: 13:40 (820분) ~ 13:50 (830분)
+            else if (simulatedMins >= 820 && simulatedMins < 830) { simulatedMins = 830; inBreak = true; }
+            // 야간 휴게시간 1: 17:40 (1060분) ~ 17:50 (1070분)
+            else if (simulatedMins >= 1060 && simulatedMins < 1070) { simulatedMins = 1070; inBreak = true; }
+            // 저녁 정지시간: 19:50 (1190분) ~ 20:30 (1230분)
+            else if (simulatedMins >= 1190 && simulatedMins < 1230) { simulatedMins = 1230; inBreak = true; }
+            // 야간 휴게시간 2: 22:30 (1350분) ~ 22:40 (1360분)
+            else if (simulatedMins >= 1350 && simulatedMins < 1360) { simulatedMins = 1360; inBreak = true; }
 
             if (!inBreak) {
                 simulatedMins++;
@@ -351,7 +381,6 @@
             `현재 차번은 <b>${curr}</b> 이며 <b>${target}</b> 까지는 <b>${realRemainingMins}</b>분이 남았습니다.<br>
             <span style="color:var(--primary); font-size:16px; margin-top:5px; display:inline-block; font-weight:800;">공바디 도착 예상시간은 ${fh}:${fm} 분입니다.</span>`;
     }
-    // --- 공차 계산 로직 종료 ---
 
     function update() {
         const now = new Date();
@@ -386,22 +415,24 @@
         if (checkMin < firstShift._start || checkMin >= lastShift._end) {
             timer.innerText = "--:--";
             label.innerText = "OFF"; 
-            task.innerText = "퇴근입니다. 오늘 하루도 고생 많으셨습니다."; // 요청하신 퇴근 문구 변경 반영
+            task.innerText = "퇴근입니다. 오늘 하루도 고생 많으셨습니다.";
             renderList(currentSchedule, null); return;
         }
 
         let currentShift = currentSchedule.find(i => checkMin >= i._start && checkMin < i._end);
         let nextIdx = currentSchedule.findIndex(i => checkMin >= i._start && checkMin < i._end) + 1;
         let nextShift = currentSchedule[nextIdx];
+        
         if (currentShift) {
             let diffSec = (currentShift._end * 60) - (checkMin * 60 + nowSec);
             timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
             
-            if (currentMode === 'general') {
-                if (currentShift.p.includes("점심") || currentShift.p.includes("저녁") || currentShift.p.includes("휴식")) {
-                    label.innerText = "다음 근무 시작까지";
-                    task.innerText = `${currentShift.p} 시간 (${currentShift.s}~${currentShift.e})`;
-                } else {
+            // 모든 탭 공통: 휴게시간, 식사시간일 경우 '휴게시간입니다.' 표시 로직
+            if (currentShift.p.includes("점심") || currentShift.p.includes("저녁") || currentShift.p.includes("휴식")) {
+                label.innerText = "휴게시간입니다.";
+                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
+            } else {
+                if (currentMode === 'general') {
                     if (diffSec <= 600 && nextShift) {
                         if (nextShift.p.includes("점심") || nextShift.p.includes("저녁")) label.innerText = "곧 식사 시간입니다";
                         else if (nextShift.p.includes("휴식")) label.innerText = "곧 쉬는 시간입니다";
@@ -410,15 +441,14 @@
                         label.innerText = "다음 근무 시작까지";
                     }
                     task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
+                } else {
+                    label.innerText = "남은 교대까지";
+                    task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
                 }
-            } else {
-                label.innerText = "남은 교대까지";
-                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
             }
         }
         renderList(currentSchedule, currentShift);
         
-        // 실시간(1분 단위 연동) 공차 계산 업데이트
         if(currentMode === 'general') {
             updateCalcDisplay();
         }
