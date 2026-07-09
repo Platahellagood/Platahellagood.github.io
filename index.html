@@ -51,7 +51,7 @@
         .container { max-width: 500px; margin: auto; position: relative; transition: max-width 0.3s; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; transition: 0.3s, text-shadow 0.3s; }
+        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; transition: 0.3s, text-shadow 0.3s, color 0.3s; }
         .settings-btn { font-size: 26px; cursor: pointer; background: none; border: none; color: var(--text); padding: 5px; }
 
         .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; }
@@ -60,7 +60,7 @@
 
         .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; transition: 0.3s; }
         #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 800; height: 1.2em; transition: 0.3s; }
-        #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; transition: 0.3s, text-shadow 0.3s; }
+        #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; transition: 0.3s, text-shadow 0.3s, color 0.3s; }
         #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; transition: 0.3s; }
 
         .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; transition: 0.3s; }
@@ -86,9 +86,16 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px);
         }
-        .modal-content { background: var(--card); width: 85%; max-width: 350px; max-height: 85vh; overflow-y: auto; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); transition: 0.3s; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
+        .modal-content { 
+            background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4); transition: 0.3s; 
+            display: flex; flex-direction: column; max-height: 80vh;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 800; font-size: 18px; flex-shrink: 0; }
         .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
+        .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; } /* 스크롤 영역 추가 */
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 10px; }
 
         /* 커스텀 알림 팝업 */
         #custom-alert {
@@ -106,12 +113,17 @@
             text-shadow: 1px 1px 0px rgba(120,120,120,0.4), 2px 2px 0px rgba(120,120,120,0.2), 3px 3px 5px rgba(0,0,0,0.3); 
         }
 
-        /* FUN (RGB) 모드 */
-        @keyframes rgbRainbow {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(360deg); }
+        /* FUN (RGB) 모드 - 필터 대신 색상을 지속적으로 변경하여 성능과 가독성 확보 */
+        @keyframes rgbColors {
+            0% { color: #FF3B30; }
+            25% { color: #FF9500; }
+            50% { color: #34C759; }
+            75% { color: #007AFF; }
+            100% { color: #AF52DE; }
         }
-        body.mode-fun { animation: rgbRainbow 4s linear infinite; }
+        body.mode-fun #timer-text, body.mode-fun .current-time-bar, body.mode-fun #countdown-label {
+            animation: rgbColors 3s infinite alternate;
+        }
 
         /* 🖥️ 태블릿 모드 (DPI 스케일업) */
         body.tablet-mode { padding: 40px; }
@@ -130,10 +142,6 @@
         body.tablet-mode .modal-content, body.tablet-mode .alert-content { max-width: 450px; padding: 35px; }
         body.tablet-mode .modal-header { font-size: 22px; }
         body.tablet-mode .alert-msg { font-size: 20px; }
-        
-        /* 웹킷 스크롤바 커스텀 */
-        .modal-content::-webkit-scrollbar { width: 6px; }
-        .modal-content::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 10px; }
     </style>
 </head>
 <body class="theme-blue">
@@ -195,57 +203,59 @@
     </div>
 
     <div id="settings-modal" onclick="if(event.target == this) toggleSettings(false)">
-        <div class="modal-content">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <span>환경 설정</span>
+                <span>⚙️ 환경 설정 PRO</span>
                 <span class="close-btn" onclick="toggleSettings(false)">✕</span>
             </div>
+            
+            <div class="modal-body">
+                <span class="label">🚀 확장 기능 옵션</span>
+                <div class="radio-group">
+                    <input type="radio" name="feat-calc" id="calc-on" value="on" checked onclick="applyFeatures()"><label for="calc-on">공차계산 ON</label>
+                    <input type="radio" name="feat-calc" id="calc-off" value="off" onclick="applyFeatures()"><label for="calc-off">OFF</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" name="feat-full" id="full-on" value="on" onclick="applyFeatures(true)"><label for="full-on">전체화면 ON</label>
+                    <input type="radio" name="feat-full" id="full-off" value="off" checked onclick="applyFeatures(true)"><label for="full-off">OFF</label>
+                </div>
+                
+                <span class="label">✨ 특수 효과 (렌더링)</span>
+                <div class="radio-group">
+                    <input type="radio" name="feat-3d" id="3d-on" value="on" onclick="applyFeatures()"><label for="3d-on">3D 텍스트 ON</label>
+                    <input type="radio" name="feat-3d" id="3d-off" value="off" checked onclick="applyFeatures()"><label for="3d-off">OFF</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" name="feat-fun" id="fun-on" value="on" onclick="applyFeatures()"><label for="fun-on">🌈 FUN (RGB) ON</label>
+                    <input type="radio" name="feat-fun" id="fun-off" value="off" checked onclick="applyFeatures()"><label for="fun-off">OFF</label>
+                </div>
+                
+                <span class="label">📱 보기 화면 설정 (DPI)</span>
+                <div class="radio-group">
+                    <input type="radio" name="view-mode" id="view-mobile" value="mobile" checked onclick="saveAndApplyTheme()"><label for="view-mobile">스마트폰</label>
+                    <input type="radio" name="view-mode" id="view-tablet" value="tablet" onclick="saveAndApplyTheme()"><label for="view-tablet">태블릿</label>
+                </div>
+                
+                <span class="label">🎨 테마 모드</span>
+                <div class="radio-group">
+                    <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
+                    <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
+                    <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
+                </div>
 
-            <span class="label">기능 옵션</span>
-            <div class="radio-group">
-                <input type="radio" name="feat-calc" id="calc-on" value="on" checked onclick="applyFeatures()"><label for="calc-on">공차계산 ON</label>
-                <input type="radio" name="feat-calc" id="calc-off" value="off" onclick="applyFeatures()"><label for="calc-off">OFF</label>
-            </div>
-            <div class="radio-group">
-                <input type="radio" name="feat-full" id="full-on" value="on" onclick="applyFeatures(true)"><label for="full-on">전체화면 ON</label>
-                <input type="radio" name="feat-full" id="full-off" value="off" checked onclick="applyFeatures(true)"><label for="full-off">OFF</label>
-            </div>
-            
-            <span class="label">특수 효과 (렌더링)</span>
-            <div class="radio-group">
-                <input type="radio" name="feat-3d" id="3d-on" value="on" onclick="applyFeatures()"><label for="3d-on">3D 입체 효과 ON</label>
-                <input type="radio" name="feat-3d" id="3d-off" value="off" checked onclick="applyFeatures()"><label for="3d-off">OFF</label>
-            </div>
-            <div class="radio-group">
-                <input type="radio" name="feat-fun" id="fun-on" value="on" onclick="applyFeatures()"><label for="fun-on">🌈 FUN (RGB) ON</label>
-                <input type="radio" name="feat-fun" id="fun-off" value="off" checked onclick="applyFeatures()"><label for="fun-off">OFF</label>
-            </div>
-            
-            <span class="label">보기 설정 (DPI)</span>
-            <div class="radio-group">
-                <input type="radio" name="view-mode" id="view-mobile" value="mobile" checked onclick="saveAndApplyTheme()"><label for="view-mobile">📱 스마트폰</label>
-                <input type="radio" name="view-mode" id="view-tablet" value="tablet" onclick="saveAndApplyTheme()"><label for="view-tablet">🖥️ 태블릿</label>
-            </div>
-            
-            <span class="label">테마 모드</span>
-            <div class="radio-group">
-                <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
-                <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
-                <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
-            </div>
-
-            <span class="label">포인트 컬러</span>
-            <div class="radio-group">
-                <input type="radio" name="accent" id="acc-blue" value="blue" checked onclick="saveAndApplyTheme()"><label for="acc-blue">Blue</label>
-                <input type="radio" name="accent" id="acc-orange" value="orange" onclick="saveAndApplyTheme()"><label for="acc-orange">Org</label>
-                <input type="radio" name="accent" id="acc-red" value="red" onclick="saveAndApplyTheme()"><label for="acc-red">Red</label>
-                <input type="radio" name="accent" id="acc-magenta" value="magenta" onclick="saveAndApplyTheme()"><label for="acc-magenta">Mag</label>
+                <span class="label">🖌️ 포인트 컬러</span>
+                <div class="radio-group">
+                    <input type="radio" name="accent" id="acc-blue" value="blue" checked onclick="saveAndApplyTheme()"><label for="acc-blue">Blue</label>
+                    <input type="radio" name="accent" id="acc-orange" value="orange" onclick="saveAndApplyTheme()"><label for="acc-orange">Org</label>
+                    <input type="radio" name="accent" id="acc-red" value="red" onclick="saveAndApplyTheme()"><label for="acc-red">Red</label>
+                    <input type="radio" name="accent" id="acc-magenta" value="magenta" onclick="saveAndApplyTheme()"><label for="acc-magenta">Mag</label>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="custom-alert" onclick="if(event.target == this) this.style.display='none'">
-        <div class="alert-content">
+        <div class="alert-content" onclick="event.stopPropagation()">
             <div class="alert-msg" id="alert-msg-text"></div>
             <button class="calc-btn-main" onclick="document.getElementById('custom-alert').style.display='none'" style="width:100%; margin-top:20px; padding:15px; font-size:16px;">확인</button>
         </div>
@@ -322,30 +332,32 @@
     }
 
     function applyFeatures(isFullToggle = false) {
-        // 공차 계산 토글
+        // 공차 계산 토글 저장
         const calcOpt = document.querySelector('input[name="feat-calc"]:checked').value;
         localStorage.setItem('feat-calc', calcOpt);
         
-        // 전체화면 토글
+        // 전체화면 토글 로직
         const fullOpt = document.querySelector('input[name="feat-full"]:checked').value;
         localStorage.setItem('feat-full', fullOpt);
         
         if(isFullToggle) {
-            if (fullOpt === 'on') {
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen().catch(e=>console.log(e));
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                    document.documentElement.webkitRequestFullscreen();
+            try {
+                if (fullOpt === 'on') {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(e=>console.log(e));
+                    } else if (document.documentElement.webkitRequestFullscreen) {
+                        document.documentElement.webkitRequestFullscreen();
+                    }
+                } else {
+                    if (document.fullscreenElement || document.webkitFullscreenElement) {
+                        if (document.exitFullscreen) document.exitFullscreen();
+                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                    }
                 }
-            } else {
-                if (document.fullscreenElement || document.webkitFullscreenElement) {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                }
-            }
+            } catch(e) { console.error("Fullscreen API Error:", e); }
         }
 
-        // 3D 토글
+        // 3D 텍스트 토글
         const tdOpt = document.querySelector('input[name="feat-3d"]:checked').value;
         localStorage.setItem('feat-3d', tdOpt);
         
@@ -353,8 +365,8 @@
         const funOpt = document.querySelector('input[name="feat-fun"]:checked').value;
         localStorage.setItem('feat-fun', funOpt);
 
-        setMode(currentMode); // 화면 갱신
-        applyBodyClasses();
+        setMode(currentMode); // 변경된 옵션(공차계산 UI 등) 즉시 반영
+        applyBodyClasses(); // 3D 및 FUN 클래스 적용
     }
 
     function applyBodyClasses() {
@@ -387,33 +399,35 @@
     }
 
     function loadSavedSettings() {
-        // 기존 설정 복원
-        const bg = localStorage.getItem('theme-bg') || 'light';
-        const acc = localStorage.getItem('theme-acc') || 'blue';
-        const view = localStorage.getItem('theme-view') || 'mobile';
-        document.getElementById('bg-' + bg).checked = true;
-        document.getElementById('acc-' + acc).checked = true;
-        document.getElementById('view-' + view).checked = true;
-        
-        // 신규 기능 복원
-        const calcOpt = localStorage.getItem('feat-calc') || 'on';
-        const fullOpt = localStorage.getItem('feat-full') || 'off';
-        const tdOpt = localStorage.getItem('feat-3d') || 'off';
-        const funOpt = localStorage.getItem('feat-fun') || 'off';
-        
-        document.getElementById('calc-' + calcOpt).checked = true;
-        document.getElementById('full-' + fullOpt).checked = true;
-        document.getElementById('3d-' + tdOpt).checked = true;
-        document.getElementById('fun-' + funOpt).checked = true;
+        try {
+            // 기본 UI 테마 설정 복원
+            const bg = localStorage.getItem('theme-bg') || 'light';
+            const acc = localStorage.getItem('theme-acc') || 'blue';
+            const view = localStorage.getItem('theme-view') || 'mobile';
+            document.getElementById('bg-' + bg).checked = true;
+            document.getElementById('acc-' + acc).checked = true;
+            document.getElementById('view-' + view).checked = true;
+            
+            // 확장 기능(공차, 전체화면, 3D, FUN) 복원
+            const calcOpt = localStorage.getItem('feat-calc') || 'on';
+            const fullOpt = localStorage.getItem('feat-full') || 'off';
+            const tdOpt = localStorage.getItem('feat-3d') || 'off';
+            const funOpt = localStorage.getItem('feat-fun') || 'off';
+            
+            document.getElementById('calc-' + calcOpt).checked = true;
+            document.getElementById('full-' + fullOpt).checked = true;
+            document.getElementById('3d-' + tdOpt).checked = true;
+            document.getElementById('fun-' + funOpt).checked = true;
 
-        saveAndApplyTheme();
-        setMode(currentMode);
+            saveAndApplyTheme();
+            setMode(currentMode);
 
-        if(localStorage.getItem(`${deviceId}_calcActive`) === 'true') {
-            document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currDisplay`) || localStorage.getItem(`${deviceId}_initCurrCar`);
-            document.getElementById('target-car').value = localStorage.getItem(`${deviceId}_targetCar`) || '';
-            runCalc(false);
-        }
+            if(localStorage.getItem(`${deviceId}_calcActive`) === 'true') {
+                document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currDisplay`) || localStorage.getItem(`${deviceId}_initCurrCar`);
+                document.getElementById('target-car').value = localStorage.getItem(`${deviceId}_targetCar`) || '';
+                runCalc(false);
+            }
+        } catch(e) { console.error("로딩 에러:", e); }
     }
 
     function setMode(mode) {
@@ -423,9 +437,10 @@
         document.getElementById('tab-general').classList.toggle('active', mode === 'general');
         document.getElementById('position-section').style.display = mode === 'rotation' ? 'block' : 'none';
         
-        // 공차 계산 옵션 확인 후 노출
+        // 사용자가 공차 계산을 'on'으로 두었을 때만 탭에 UI 띄우기
         const calcOpt = localStorage.getItem('feat-calc') || 'on';
         document.getElementById('general-extra').style.display = (mode === 'general' && calcOpt === 'on') ? 'block' : 'none';
+        
         update();
     }
 
@@ -542,7 +557,11 @@
         document.getElementById('realtime-clock').innerText = clockStr;
         const nowMin = now.getHours() * 60 + now.getMinutes();
         const nowSec = now.getSeconds();
-        const shiftVal = document.querySelector('input[name="shift"]:checked').value;
+        
+        const shiftElement = document.querySelector('input[name="shift"]:checked');
+        if(!shiftElement) return;
+        const shiftVal = shiftElement.value;
+        
         let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[document.querySelector('input[name="pos"]:checked').value];
         const currentSchedule = targetData.filter(item => shiftVal === "night" ? item.n : !item.n);
 
