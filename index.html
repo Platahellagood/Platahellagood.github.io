@@ -5,120 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>FRT 시트 알람 PRO</title>
     <style>
+        /* 기본 변수 (라이트 모드) */
         :root {
             --bg: #F2F2F7;
-            --card: #FFFFFF;
+            --card: rgba(255, 255, 255, 0.85); /* 배경이 보이도록 투명도 조정 */
             --text: #1C1C1E;
             --secondary: #8E8E93;
             --primary: #007AFF; 
-            --tab-bg: #E3E3E8;
-            --overlay: rgba(0, 0, 0, 0);
+            --tab-bg: rgba(227, 227, 232, 0.85);
         }
 
+        /* 다크 모드 (일반) */
         body.dark-mode {
             --bg: #1C1C1E;
-            --card: #2C2C2E;
+            --card: rgba(44, 44, 46, 0.85);
             --text: #FFFFFF;
             --secondary: #AEAEB2;
-            --tab-bg: #3A3A3C;
-            --overlay: rgba(0, 0, 0, 0.2);
+            --tab-bg: rgba(58, 58, 60, 0.85);
         }
 
+        /* 다크 모드 (OLED) */
         body.oled-mode {
             --bg: #000000;
-            --card: #151515;
+            --card: rgba(21, 21, 21, 0.85);
             --text: #FFFFFF;
             --secondary: #8E8E93;
-            --tab-bg: #222222;
-            --overlay: rgba(0, 0, 0, 0.4);
+            --tab-bg: rgba(34, 34, 34, 0.85);
         }
 
-        /* 날씨 테마 전용 배경 및 오버레이 효과 */
-        body.theme-weather {
-            --bg: linear-gradient(to bottom, #3a485a, #1a233a);
-            --card: rgba(255, 255, 255, 0.12);
-            --text: #FFFFFF;
-            --secondary: #EBF5FF;
-            --primary: #5AC8FA;
-            --tab-bg: rgba(255, 255, 255, 0.08);
-            --overlay: rgba(0, 0, 0, 0.35);
-            background-attachment: fixed;
-        }
-
+        /* 포인트 색상 테마 */
         body.theme-orange { --primary: #FF9500; }
         body.theme-red { --primary: #FF3B30; }
         body.theme-magenta { --primary: #AF52DE; }
         body.theme-blue { --primary: #007AFF; }
 
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-            background: var(--bg); 
+            font-family: -apple-system, sans-serif; 
             color: var(--text); 
             margin: 0; padding: 20px; 
-            transition: background 0.3s, color 0.3s;
+            transition: color 0.3s;
             padding-top: env(safe-area-inset-top);
-            position: relative;
-            min-height: 100vh;
-            box-sizing: border-box;
-            overflow-x: hidden;
+            
+            /* 날씨 배경 기본 설정 */
+            background-color: var(--bg);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-blend-mode: overlay; /* 테마의 배경색과 이미지를 자연스럽게 섞음 */
+            backdrop-filter: blur(2px);
         }
 
-        /* 현실적인 비 애니메이션 효과 캔버스 */
-        #weather-canvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: -1;
-            pointer-events: none;
-            display: none;
-        }
-
-        /* 어두운 대기 오버레이 레이어 */
-        body.theme-weather::before {
-            content: "";
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--overlay);
-            z-index: -2;
-            pointer-events: none;
-        }
-
-        .container { max-width: 500px; margin: auto; position: relative; z-index: 1; }
+        .container { max-width: 500px; margin: auto; position: relative; z-index: 2; }
+        
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
-        .settings-btn { font-size: 26px; cursor: pointer; background: none; border: none; color: var(--text); padding: 5px; }
+        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+        .settings-btn { font-size: 26px; cursor: pointer; background: none; border: none; color: var(--text); padding: 5px; text-shadow: 0 1px 4px rgba(0,0,0,0.2); }
 
-        /* 날씨 요약 정보 레이아웃 */
-        .weather-info-box {
-            display: flex; justify-content: space-between; align-items: center;
-            background: var(--card); border-radius: 16px; padding: 12px 16px; margin-bottom: 15px;
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            font-size: 13px; font-weight: 500;
+        /* 날씨 위젯 섹션 */
+        .weather-widget {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: var(--card);
+            border-radius: 18px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
-        .weather-details { text-align: right; line-height: 1.4; }
+        .weather-emoji { font-size: 42px; margin-bottom: 5px; }
+        .weather-details { font-size: 13px; font-weight: 600; color: var(--secondary); }
 
-        .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; }
+        .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; backdrop-filter: blur(10px); }
         .tab-btn { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: bold; color: var(--secondary); border-radius: 11px; cursor: pointer; border: none; background: transparent; transition: 0.2s; }
         .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
 
-        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
         #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 700; height: 1.2em; }
         #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; }
         #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; }
 
-        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; }
-        .radio-group { display: flex; background: var(--tab-bg); border-radius: 12px; padding: 2px; margin-bottom: 10px; }
+        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .radio-group { display: flex; background: var(--tab-bg); border-radius: 12px; padding: 2px; margin-bottom: 10px; backdrop-filter: blur(10px); }
         .radio-group label { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; border-radius: 10px; cursor: pointer; color: var(--secondary); }
         .radio-group input { display: none; }
         .radio-group input:checked + label { background: var(--card); box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-weight: bold; color: var(--primary); }
 
-        /* 공차 계산 전용 박스 디자인 */
-        .tolerance-box {
-            background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 15px;
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); text-align: center;
-        }
-
-        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
         .schedule-item { padding: 14px 18px; border-bottom: 0.5px solid var(--tab-bg); display: flex; justify-content: space-between; font-size: 13px; }
         .schedule-item:last-child { border-bottom: none; }
         .schedule-item.active-now { background: var(--tab-bg); border-radius: 14px; color: var(--primary); font-weight: bold; }
@@ -128,18 +100,12 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px);
         }
-        .modal-content { background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); max-height: 85vh; overflow-y: auto; }
+        .modal-content { background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
         .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
-        
-        /* 체크박스 스타일 커스텀 */
-        .checkbox-container { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px; font-size: 14px; color: var(--text); }
-        .checkbox-container input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
     </style>
 </head>
 <body class="theme-blue">
-
-    <canvas id="weather-canvas"></canvas>
 
     <div class="container">
         <div class="header">
@@ -147,17 +113,17 @@
             <button class="settings-btn" onclick="toggleSettings(true)">⚙️</button>
         </div>
 
-        <div class="weather-info-box" id="weather-box">
-            <span id="weather-status">🌧️ 실시간 기상 분석 중...</span>
-            <div class="weather-details" id="weather-details">강수확률: --% | 강수량: --mm</div>
+        <div class="weather-widget" id="weather-container">
+            <div class="weather-emoji" id="w-emoji">⏳</div>
+            <div class="weather-details">
+                강수 확률: <span id="w-prob">--</span>% &nbsp;|&nbsp; 예상 강수량: <span id="w-amount">--</span>mm
+            </div>
         </div>
 
         <div class="tab-menu">
             <button class="tab-btn active" id="tab-rotation" onclick="setMode('rotation')">🔄 교대 근무</button>
             <button class="tab-btn" id="tab-general" onclick="setMode('general')">⏳ 일반 근무</button>
         </div>
-
-        <div id="tolerance-placement-zone"></div>
 
         <div class="card">
             <div id="countdown-label">--</div>
@@ -199,7 +165,6 @@
                 <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
                 <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
                 <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
-                <input type="radio" name="bg-mode" id="bg-weather" value="weather" onclick="saveAndApplyTheme()"><label for="bg-weather">날씨</label>
             </div>
 
             <span class="label">포인트 컬러</span>
@@ -210,17 +175,17 @@
                 <input type="radio" name="accent" id="acc-magenta" value="magenta" onclick="saveAndApplyTheme()"><label for="acc-magenta">Mag</label>
             </div>
 
-            <span class="label">기능 설정</span>
-            <div class="checkbox-container">
-                <label for="chk-tolerance-placement">일반 근무 탭에 공차계산 배치</label>
-                <input type="checkbox" id="chk-tolerance-placement" onchange="saveToleranceSetting()">
+            <span class="label">공차계산 탭 위치</span>
+            <div class="radio-group">
+                <input type="radio" name="tolerance-pos" id="tol-general" value="general" checked onclick="saveTolerancePos()"><label for="tol-general">일반 근무</label>
+                <input type="radio" name="tolerance-pos" id="tol-rotation" value="rotation" onclick="saveTolerancePos()"><label for="tol-rotation">교대 근무</label>
             </div>
-            <div style="font-size:11px; color:var(--secondary); margin-top:2px; padding-left:4px;">(체크 해제 시 교대근무 탭에 표시됩니다)</div>
         </div>
     </div>
 
 <script>
     let currentMode = localStorage.getItem('mode') || 'rotation';
+
     const RAW_DATA = {
         lh: [
             {s:"06:50", e:"07:15", p:"LH"}, {s:"07:20", e:"07:45", p:"휴식"}, {s:"07:50", e:"08:15", p:"RH"}, {s:"08:20", e:"08:50", p:"글라스"},
@@ -273,10 +238,6 @@
         ]
     };
 
-    // --- 애니메이션 엔진 관련 변수 ---
-    let canvas, ctx, animationFrameId;
-    let raindrops = [];
-
     function toggleSettings(show) {
         document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
     }
@@ -288,56 +249,31 @@
         localStorage.setItem('theme-acc', acc);
         
         document.body.className = '';
-        stopRainAnimation();
-
         if (bg === 'dark') document.body.classList.add('dark-mode');
         if (bg === 'oled') document.body.classList.add('oled-mode');
-        if (bg === 'weather') {
-            document.body.classList.add('theme-weather');
-            startRainAnimation();
-        }
         document.body.classList.add('theme-' + acc);
+    }
+
+    function saveTolerancePos() {
+        const pos = document.querySelector('input[name="tolerance-pos"]:checked').value;
+        localStorage.setItem('tolerance-pos', pos);
+        // 여기서 실제 공차계산 탭 이동 로직은 건드리지 않음
     }
 
     function loadSavedSettings() {
         const bg = localStorage.getItem('theme-bg') || 'light';
         const acc = localStorage.getItem('theme-acc') || 'blue';
-        const isGeneralTab = localStorage.getItem('tolerance-in-general') === 'true';
+        const tolPos = localStorage.getItem('tolerance-pos') || 'general';
 
         document.getElementById('bg-' + bg).checked = true;
         document.getElementById('acc-' + acc).checked = true;
-        document.getElementById('chk-tolerance-placement').checked = isGeneralTab;
-
+        document.getElementById('tol-' + tolPos).checked = true;
+        
         saveAndApplyTheme();
         setMode(currentMode);
-        fetchWeatherMock(); // 초기 기상 분석 로드
-    }
-
-    // 공차 계산 옵션 세팅 저장 및 리렌더링 트리거
-    function saveToleranceSetting() {
-        const checked = document.getElementById('chk-tolerance-placement').checked;
-        localStorage.setItem('tolerance-in-general', checked);
-        renderToleranceComponent();
-    }
-
-    // 공차 계산 컴포넌트의 가시성 제어 스위처
-    function renderToleranceComponent() {
-        const container = document.getElementById('tolerance-placement-zone');
-        const targetTabInGeneral = localStorage.getItem('tolerance-in-general') === 'true';
         
-        // 현재 탭 상태와 설정 창 매칭 여부 체크
-        const shouldShow = (targetTabInGeneral && currentMode === 'general') || (!targetTabInGeneral && currentMode === 'rotation');
-        
-        if (shouldShow) {
-            container.innerHTML = `
-                <div class="tolerance-box">
-                    <div style="font-size:14px; font-weight:700; margin-bottom:4px;">📐 실시간 공차 자동 계산기</div>
-                    <div style="font-size:12px; opacity:0.8;">현재 차번 및 타깃 편차 분석 대기 중</div>
-                </div>
-            `;
-        } else {
-            container.innerHTML = '';
-        }
+        // 날씨 정보 초기 로드
+        fetchWeatherData();
     }
 
     function setMode(mode) {
@@ -346,108 +282,84 @@
         document.getElementById('tab-rotation').classList.toggle('active', mode === 'rotation');
         document.getElementById('tab-general').classList.toggle('active', mode === 'general');
         document.getElementById('position-section').style.display = mode === 'rotation' ? 'block' : 'none';
-        
-        renderToleranceComponent();
         update();
     }
 
-    // --- 가상 기상 관측소 API 가공 및 데이터 마운트 ---
-    function fetchWeatherMock() {
-        // 실제 현업망 환경 연동 시 기상청 오픈 API 또는 공공데이터 포털 좌표값 GET 호출 구간
-        setTimeout(() => {
-            const mockRainProbability = 85; 
-            const mockPrecipitation = 4.2;  
+    // 날씨 API 및 동적 배경 연동 (Open-Meteo 무료 API 사용)
+    function fetchWeatherData() {
+        // 기본 위치 (서울), 필요 시 geolocation 사용 가능
+        const lat = 37.5665;
+        const lon = 126.9780;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability,precipitation`;
 
-            document.getElementById('weather-status').innerText = `🌧️ 현재 위치 비 내림 (흐림)`;
-            document.getElementById('weather-details').innerText = `강수확률: ${mockRainProbability}% | 강수량: ${mockPrecipitation}mm`;
-        }, 800);
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const current = data.current_weather;
+                const currentHour = new Date().getHours();
+                
+                const prob = data.hourly.precipitation_probability[currentHour] || 0;
+                const amount = data.hourly.precipitation[currentHour] || 0;
+                
+                document.getElementById('w-prob').innerText = prob;
+                document.getElementById('w-amount').innerText = amount;
+
+                applyRealisticWeatherBackground(current.weathercode, current.is_day);
+            })
+            .catch(err => console.error("날씨 데이터를 불러오지 못했습니다:", err));
     }
 
-    // --- 고성능 가상 비주얼 렌더링 엔진 (Canvas 기반 60FPS) ---
-    function initRainEngine() {
-        canvas = document.getElementById('weather-canvas');
-        if (!canvas) return;
-        ctx = canvas.getContext('2d');
-        
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+    function applyRealisticWeatherBackground(code, isDay) {
+        let bgUrl = '';
+        let emoji = '';
 
-        raindrops = [];
-        for (let i = 0; i < 75; i++) {
-            raindrops.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                length: Math.random() * 20 + 15,
-                speed: Math.random() * 8 + 12,
-                opacity: Math.random() * 0.3 + 0.15
-            });
+        // WMO 날씨 코드 기반 현실적인 배경 매핑
+        if (code === 0) { 
+            // 맑음
+            bgUrl = isDay ? 'url("https://images.unsplash.com/photo-1601297183314-c09d845e2a39?auto=format&fit=crop&q=80&w=1080")' 
+                          : 'url("https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&q=80&w=1080")'; 
+            emoji = isDay ? '☀️' : '🌕'; 
+        } 
+        else if (code >= 1 && code <= 3) { 
+            // 흐림/구름
+            bgUrl = 'url("https://images.unsplash.com/photo-1534088568595-a066f410cbda?auto=format&fit=crop&q=80&w=1080")'; 
+            emoji = '☁️'; 
+        } 
+        else if (code >= 51 && code <= 67 || code >= 80 && code <= 82) { 
+            // 비 (현실적인 빗물 창문 GIF)
+            bgUrl = 'url("https://media.giphy.com/media/l0HlPeXXPqL4EwKLu/giphy.gif")'; 
+            emoji = '🌧️'; 
+        } 
+        else if (code >= 71 && code <= 77 || code === 85 || code === 86) { 
+            // 눈
+            bgUrl = 'url("https://media.giphy.com/media/Bd55BEmZuuW8E/giphy.gif")'; 
+            emoji = '❄️'; 
+        } 
+        else if (code >= 95) { 
+            // 천둥번개
+            bgUrl = 'url("https://media.giphy.com/media/26uff5vH9U1B2v7zO/giphy.gif")'; 
+            emoji = '⛈️'; 
         }
-    }
 
-    function resizeCanvas() {
-        if(canvas) {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-    }
-
-    function drawRainFrame() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = 'rgba(174, 219, 255, 0.6)';
-        ctx.lineWidth = 1.5;
-        
-        for (let i = 0; i < raindrops.length; i++) {
-            let p = raindrops[i];
-            ctx.beginPath();
-            // 현실감 있는 빗줄기 낙하 각도 구현 (사선 하강 처리)
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p.x + 2, p.y + p.length);
-            ctx.stroke();
-            
-            p.y += p.speed;
-            p.x += 0.5; 
-            
-            if (p.y > canvas.height) {
-                p.y = -p.length;
-                p.x = Math.random() * canvas.width;
-            }
-        }
-        animationFrameId = requestAnimationFrame(drawRainFrame);
-    }
-
-    function startRainAnimation() {
-        const cvs = document.getElementById('weather-canvas');
-        if(cvs) cvs.style.display = 'block';
-        initRainEngine();
-        drawRainFrame();
-    }
-
-    function stopRainAnimation() {
-        const cvs = document.getElementById('weather-canvas');
-        if(cvs) cvs.style.display = 'none';
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-        }
-        window.removeEventListener('resize', resizeCanvas);
+        document.body.style.backgroundImage = bgUrl;
+        document.getElementById('w-emoji').innerText = emoji;
     }
 
     function update() {
         const now = new Date();
         const clockStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0') + ":" + now.getSeconds().toString().padStart(2,'0');
         document.getElementById('realtime-clock').innerText = clockStr;
+        
         const nowMin = now.getHours() * 60 + now.getMinutes();
         const nowSec = now.getSeconds();
-        
-        const activeShiftElement = document.querySelector('input[name="shift"]:checked');
-        if (!activeShiftElement) return;
-        const shiftVal = activeShiftElement.value;
-        
-        const activePosElement = document.querySelector('input[name="pos"]:checked');
-        let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[activePosElement ? activePosElement.value : 'lh'];
+        const isNight = document.querySelector('input[name="shift"]:checked').checked && document.querySelector('input[name="shift"]:checked').value === "night";
+        const shiftVal = document.querySelector('input[name="shift"]:checked').value;
+        let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[document.querySelector('input[name="pos"]:checked').value];
         const currentSchedule = targetData.filter(item => shiftVal === "night" ? item.n : !item.n);
 
         let checkMin = nowMin;
         if (shiftVal === "night" && nowMin < 360) checkMin += 1440;
+        
         currentSchedule.forEach(item => {
             let [sh, sm] = item.s.split(':').map(Number);
             let [eh, em] = item.e.split(':').map(Number);
@@ -458,6 +370,7 @@
             if (end < start) end += 1440;
             item._start = start; item._end = end;
         });
+
         const label = document.getElementById('countdown-label');
         const timer = document.getElementById('timer-text');
         const task = document.getElementById('current-task');
@@ -465,9 +378,10 @@
         const firstShift = currentSchedule[0];
         const lastShift = currentSchedule[currentSchedule.length - 1];
         
-        if (!firstShift || checkMin < firstShift._start || checkMin >= lastShift._end) {
+        if (checkMin < firstShift._start || checkMin >= lastShift._end) {
             timer.innerText = "--:--";
             label.innerText = "OFF"; 
+            // 사용자 우선순위 규칙에 따른 퇴근 문구 적용
             task.innerText = "퇴근입니다. 오늘 하루도 고생 많으셨습니다.";
             renderList(currentSchedule, null); return;
         }
@@ -475,6 +389,7 @@
         let currentShift = currentSchedule.find(i => checkMin >= i._start && checkMin < i._end);
         let nextIdx = currentSchedule.findIndex(i => checkMin >= i._start && checkMin < i._end) + 1;
         let nextShift = currentSchedule[nextIdx];
+        
         if (currentShift) {
             let diffSec = (currentShift._end * 60) - (checkMin * 60 + nowSec);
             timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
@@ -514,6 +429,8 @@
     document.querySelectorAll('input').forEach(input => input.addEventListener('change', update));
     window.onload = loadSavedSettings;
     setInterval(update, 1000);
+    // 날씨 데이터는 30분(1800000ms)마다 주기적으로 업데이트
+    setInterval(fetchWeatherData, 1800000);
 </script>
 </body>
 </html>
