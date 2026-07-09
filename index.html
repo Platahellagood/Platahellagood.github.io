@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>FRT 시트 알람 PRO</title>
     <style>
-        /* 기본 변수 (라이트 모드) */
         :root {
             --bg: #F2F2F7;
             --card: #FFFFFF;
@@ -13,183 +12,134 @@
             --secondary: #8E8E93;
             --primary: #007AFF; 
             --tab-bg: #E3E3E8;
-            --weather-effect-bg: transparent;
+            --overlay: rgba(0, 0, 0, 0);
         }
 
-        /* 다크 모드 (일반) */
         body.dark-mode {
             --bg: #1C1C1E;
             --card: #2C2C2E;
             --text: #FFFFFF;
             --secondary: #AEAEB2;
             --tab-bg: #3A3A3C;
+            --overlay: rgba(0, 0, 0, 0.2);
         }
 
-        /* 다크 모드 (OLED) */
         body.oled-mode {
             --bg: #000000;
             --card: #151515;
             --text: #FFFFFF;
             --secondary: #8E8E93;
             --tab-bg: #222222;
+            --overlay: rgba(0, 0, 0, 0.4);
         }
 
-        /* 포인트 색상 테마 */
+        /* 날씨 테마 전용 배경 및 오버레이 효과 */
+        body.theme-weather {
+            --bg: linear-gradient(to bottom, #3a485a, #1a233a);
+            --card: rgba(255, 255, 255, 0.12);
+            --text: #FFFFFF;
+            --secondary: #EBF5FF;
+            --primary: #5AC8FA;
+            --tab-bg: rgba(255, 255, 255, 0.08);
+            --overlay: rgba(0, 0, 0, 0.35);
+            background-attachment: fixed;
+        }
+
         body.theme-orange { --primary: #FF9500; }
         body.theme-red { --primary: #FF3B30; }
         body.theme-magenta { --primary: #AF52DE; }
         body.theme-blue { --primary: #007AFF; }
 
-        /* 날씨 상태별 배경 테마 (날씨 테마 선택시 활성화) */
-        body.theme-weather-clearsky { --bg: linear-gradient(135deg, #74ABE2 0%, #5579C6 100%); --card: rgba(255,255,255,0.85); --text: #1C1C1E; --tab-bg: rgba(0,0,0,0.08); }
-        body.theme-weather-cloudy { --bg: linear-gradient(135deg, #8A95A5 0%, #5C6672 100%); --card: rgba(255,255,255,0.2); --text: #FFFFFF; --tab-bg: rgba(255,255,255,0.1); --secondary: #E5E5EA; --primary: #FFCC00;}
-        body.theme-weather-rain { --bg: linear-gradient(135deg, #4B5762 0%, #2B333C 100%); --card: rgba(255,255,255,0.15); --text: #FFFFFF; --tab-bg: rgba(255,255,255,0.1); --secondary: #D1D1D6; --primary: #64D2FF;}
-        body.theme-weather-snow { --bg: linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%); --card: rgba(255,255,255,0.75); --text: #1C1C1E; --tab-bg: rgba(0,0,0,0.05); }
-
         body { 
-            font-family: -apple-system, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
             background: var(--bg); 
             color: var(--text); 
             margin: 0; padding: 20px; 
-            transition: background 0.3s, color 0.3s, padding 0.3s;
+            transition: background 0.3s, color 0.3s;
             padding-top: env(safe-area-inset-top);
             position: relative;
+            min-height: 100vh;
+            box-sizing: border-box;
             overflow-x: hidden;
         }
 
-        /* 날씨 이펙트 컨테이너 */
-        #weather-canvas-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 1; overflow: hidden;
-        }
-        .rain-drop { position: absolute; background: linear-gradient(transparent, #A1C4FD); width: 1px; height: 40px; opacity: 0.7; animation: fall linear infinite; }
-        .snow-flake { position: absolute; background: #FFFFFF; border-radius: 50%; opacity: 0.8; animation: fall linear infinite; }
-        @keyframes fall {
-            0% { transform: translateY(-50px) translateX(0); }
-            100% { transform: translateY(100vh) translateX(20px); }
+        /* 현실적인 비 애니메이션 효과 캔버스 */
+        #weather-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            display: none;
         }
 
-        .container { max-width: 500px; margin: auto; position: relative; transition: max-width 0.3s; z-index: 2; }
-        
+        /* 어두운 대기 오버레이 레이어 */
+        body.theme-weather::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--overlay);
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .container { max-width: 500px; margin: auto; position: relative; z-index: 1; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; transition: 0.3s, text-shadow 0.3s, color 0.3s; }
+        .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
         .settings-btn { font-size: 26px; cursor: pointer; background: none; border: none; color: var(--text); padding: 5px; }
+
+        /* 날씨 요약 정보 레이아웃 */
+        .weather-info-box {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card); border-radius: 16px; padding: 12px 16px; margin-bottom: 15px;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            font-size: 13px; font-weight: 500;
+        }
+        .weather-details { text-align: right; line-height: 1.4; }
 
         .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; }
         .tab-btn { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: bold; color: var(--secondary); border-radius: 11px; cursor: pointer; border: none; background: transparent; transition: 0.2s; }
         .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
 
-        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; transition: 0.3s; backdrop-filter: blur(5px); }
-        #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 800; height: 1.2em; transition: 0.3s; }
-        #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; transition: 0.3s, text-shadow 0.3s, color 0.3s; }
-        #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; transition: 0.3s; }
+        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 700; height: 1.2em; }
+        #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; }
+        #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; }
 
-        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; transition: 0.3s; }
+        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; }
         .radio-group { display: flex; background: var(--tab-bg); border-radius: 12px; padding: 2px; margin-bottom: 10px; }
-        .radio-group label { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; border-radius: 10px; cursor: pointer; color: var(--secondary); transition: 0.3s; }
+        .radio-group label { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; border-radius: 10px; cursor: pointer; color: var(--secondary); }
         .radio-group input { display: none; }
         .radio-group input:checked + label { background: var(--card); box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-weight: bold; color: var(--primary); }
 
-        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; backdrop-filter: blur(5px); }
-        .schedule-item { padding: 14px 18px; border-bottom: 0.5px solid var(--tab-bg); display: flex; justify-content: space-between; font-size: 13px; transition: 0.3s; }
+        /* 공차 계산 전용 박스 디자인 */
+        .tolerance-box {
+            background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 15px;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); text-align: center;
+        }
+
+        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .schedule-item { padding: 14px 18px; border-bottom: 0.5px solid var(--tab-bg); display: flex; justify-content: space-between; font-size: 13px; }
         .schedule-item:last-child { border-bottom: none; }
         .schedule-item.active-now { background: var(--tab-bg); border-radius: 14px; color: var(--primary); font-weight: bold; }
-
-        /* 공차 계산 UI */
-        .calc-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
-        .calc-input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--tab-bg); background: var(--bg); color: var(--text); font-size: 14px; text-align: center; font-weight: 600; transition: 0.3s; }
-        .calc-btn-sub { padding: 0 15px; background: var(--tab-bg); color: var(--text); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .calc-btn-main { padding: 0 15px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s; }
-        .calc-result-box { margin-top: 12px; padding: 15px; background: var(--bg); border-radius: 12px; font-size: 14px; color: var(--text); line-height: 1.6; font-weight: 500; text-align: center; transition: 0.3s; }
-
-        /* 날씨 섹션 UI */
-        .weather-card { padding: 15px; margin-top: 10px; text-align: left; }
-        .weather-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .weather-title { font-size: 13px; font-weight: bold; color: var(--text); display: flex; align-items: center; gap: 5px; }
-        .weather-refresh-group { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--secondary); }
-        .weather-refresh-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px; color: var(--text); transition: transform 0.2s; }
-        .weather-refresh-btn:active { transform: scale(0.85); }
-        
-        .weather-scroll-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none; }
-        .weather-scroll-container::-webkit-scrollbar { display: none; }
-        .weather-hourly-item { flex-shrink: 0; width: 68px; background: var(--tab-bg); border-radius: 12px; padding: 10px 5px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.3s; }
-        .weather-hourly-item.is-now { border: 1.5px solid var(--primary); background: var(--card); }
-        .weather-time { font-size: 11px; font-weight: 600; opacity: 0.8; }
-        .weather-icon { font-size: 20px; margin: 2px 0; }
-        .weather-temp { font-size: 13px; font-weight: bold; }
-        .weather-pop { font-size: 10px; color: #007AFF; font-weight: bold; }
 
         /* 설정 모달 */
         #settings-modal { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px);
         }
-        .modal-content { 
-            background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.4); transition: 0.3s; 
-            display: flex; flex-direction: column; max-height: 80vh;
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+        .modal-content { background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); max-height: 85vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
         .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
-        .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
-        .modal-body::-webkit-scrollbar { width: 6px; }
-        .modal-body::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 10px; }
-
-        /* 커스텀 알림 팝업 */
-        #custom-alert {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px);
-        }
-        .alert-content { background: var(--card); width: 80%; max-width: 320px; border-radius: 24px; padding: 30px 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); text-align: center; }
-        .alert-msg { font-size: 16px; line-height: 1.6; font-weight: 600; color: var(--text); word-break: keep-all; }
-
-        /* 3D 텍스트 모드 */
-        body.mode-3d #timer-text { 
-            text-shadow: 2px 2px 0px rgba(120,120,120,0.4), 4px 4px 0px rgba(120,120,120,0.2), 6px 6px 8px rgba(0,0,0,0.3); 
-        }
-        body.mode-3d .current-time-bar { 
-            text-shadow: 1px 1px 0px rgba(120,120,120,0.4), 2px 2px 0px rgba(120,120,120,0.2), 3px 3px 5px rgba(0,0,0,0.3); 
-        }
-
-        /* FUN (RGB) 모드 */
-        @keyframes rgbColors {
-            0% { color: #FF3B30; }
-            25% { color: #FF9500; }
-            50% { color: #34C759; }
-            75% { color: #007AFF; }
-            100% { color: #AF52DE; }
-        }
-        body.mode-fun #timer-text, body.mode-fun .current-time-bar, body.mode-fun #countdown-label {
-            animation: rgbColors 3s infinite alternate;
-        }
-
-        /* 🖥️ 태블릿 모드 (DPI 스케일업) */
-        body.tablet-mode { padding: 40px; }
-        body.tablet-mode .container { max-width: 768px; }
-        body.tablet-mode .current-time-bar { font-size: 34px; }
-        body.tablet-mode #countdown-label { font-size: 20px; }
-        body.tablet-mode #timer-text { font-size: 96px; }
-        body.tablet-mode #current-task { font-size: 22px; }
-        body.tablet-mode .tab-btn { font-size: 18px; padding: 18px 0; }
-        body.tablet-mode .label { font-size: 16px; margin: 20px 0 10px 5px; }
-        body.tablet-mode .radio-group label { font-size: 16px; padding: 16px 0; }
-        body.tablet-mode .schedule-item { font-size: 17px; padding: 22px 24px; }
-        body.tablet-mode .calc-input { font-size: 18px; padding: 16px; }
-        body.tablet-mode .calc-btn-sub, body.tablet-mode .calc-btn-main { font-size: 16px; padding: 0 25px; }
-        body.tablet-mode .calc-result-box { font-size: 18px; padding: 25px; }
-        body.tablet-mode .modal-content, body.tablet-mode .alert-content { max-width: 450px; padding: 35px; }
-        body.tablet-mode .modal-header { font-size: 22px; }
-        body.tablet-mode .alert-msg { font-size: 20px; }
-        body.tablet-mode .weather-hourly-item { width: 90px; padding: 15px 5px; }
-        body.tablet-mode .weather-time { font-size: 14px; }
-        body.tablet-mode .weather-icon { font-size: 28px; }
-        body.tablet-mode .weather-temp { font-size: 16px; }
-        body.tablet-mode .weather-pop { font-size: 12px; }
+        
+        /* 체크박스 스타일 커스텀 */
+        .checkbox-container { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px; font-size: 14px; color: var(--text); }
+        .checkbox-container input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
     </style>
 </head>
 <body class="theme-blue">
 
-    <div id="weather-canvas-container"></div>
+    <canvas id="weather-canvas"></canvas>
 
     <div class="container">
         <div class="header">
@@ -197,10 +147,17 @@
             <button class="settings-btn" onclick="toggleSettings(true)">⚙️</button>
         </div>
 
+        <div class="weather-info-box" id="weather-box">
+            <span id="weather-status">🌧️ 실시간 기상 분석 중...</span>
+            <div class="weather-details" id="weather-details">강수확률: --% | 강수량: --mm</div>
+        </div>
+
         <div class="tab-menu">
             <button class="tab-btn active" id="tab-rotation" onclick="setMode('rotation')">🔄 교대 근무</button>
             <button class="tab-btn" id="tab-general" onclick="setMode('general')">⏳ 일반 근무</button>
         </div>
+
+        <div id="tolerance-placement-zone"></div>
 
         <div class="card">
             <div id="countdown-label">--</div>
@@ -224,261 +181,163 @@
             <input type="radio" name="shift" id="night" value="night"><label for="night">🌙 야간</label>
         </div>
 
-        <div id="general-extra" style="display: none;">
-            <span class="label">차량 도착 예상 (공차 계산)</span>
-            <div class="card" style="padding: 15px; margin-bottom: 0;">
-                <div class="calc-input-row">
-                    <input type="number" id="curr-car" class="calc-input" placeholder="현재 차번 (예: 4011)">
-                    <button class="calc-btn-sub" onclick="saveCurrCar()">확인</button>
-                </div>
-                <div class="calc-input-row">
-                    <input type="number" id="target-car" class="calc-input" placeholder="공바디 차번 (예: 4052)">
-                    <button class="calc-btn-main" onclick="startCalc()">계산</button>
-                </div>
-                <div class="calc-result-box" id="calc-result">
-                    대기중...
-                </div>
-            </div>
-        </div>
-
         <span class="label">오늘의 상세 일정</span>
         <div class="schedule-card">
             <div id="schedule-list"></div>
         </div>
-
-        <div id="weather-section" style="display: block;">
-            <span class="label">소하리 공장 실시간 기상 현황 (Yr 연동)</span>
-            <div class="card weather-card">
-                <div class="weather-top">
-                    <div class="weather-title">📍 광명 소하리 <span id="weather-main-summary">-</span></div>
-                    <div class="weather-refresh-group">
-                        <span id="weather-last-updated">업데이트 전</span>
-                        <button class="weather-refresh-btn" onclick="fetchWeather(true)">🔄</button>
-                    </div>
-                </div>
-                <div class="weather-scroll-container" id="weather-hourly-list">
-                    </div>
-            </div>
-        </div>
     </div>
 
     <div id="settings-modal" onclick="if(event.target == this) toggleSettings(false)">
-        <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-content">
             <div class="modal-header">
-                <span>⚙️ 환경 설정 PRO</span>
+                <span>환경 설정</span>
                 <span class="close-btn" onclick="toggleSettings(false)">✕</span>
             </div>
             
-            <div class="modal-body">
-                <span class="label">🚀 확장 기능 옵션</span>
-                <div class="radio-group">
-                    <input type="radio" name="feat-calc" id="calc-on" value="on" checked onclick="applyFeatures()"><label for="calc-on">공차계산 ON</label>
-                    <input type="radio" name="feat-calc" id="calc-off" value="off" onclick="applyFeatures()"><label for="calc-off">OFF</label>
-                </div>
-                <div class="radio-group">
-                    <input type="radio" name="feat-weather" id="weather-on" value="on" checked onclick="applyFeatures()"><label for="weather-on">날씨 UI ON</label>
-                    <input type="radio" name="feat-weather" id="weather-off" value="off" onclick="applyFeatures()"><label for="weather-off">OFF</label>
-                </div>
-                <div class="radio-group">
-                    <input type="radio" name="feat-full" id="full-on" value="on" onclick="applyFeatures(true)"><label for="full-on">전체화면 ON</label>
-                    <input type="radio" name="feat-full" id="full-off" value="off" checked onclick="applyFeatures(true)"><label for="full-off">OFF</label>
-                </div>
-                
-                <span class="label">✨ 특수 효과 (렌더링)</span>
-                <div class="radio-group">
-                    <input type="radio" name="feat-3d" id="3d-on" value="on" onclick="applyFeatures()"><label for="3d-on">3D 텍스트 ON</label>
-                    <input type="radio" name="feat-3d" id="3d-off" value="off" checked onclick="applyFeatures()"><label for="3d-off">OFF</label>
-                </div>
-                <div class="radio-group">
-                    <input type="radio" name="feat-fun" id="fun-on" value="on" onclick="applyFeatures()"><label for="fun-on">🌈 FUN (RGB) ON</label>
-                    <input type="radio" name="feat-fun" id="fun-off" value="off" checked onclick="applyFeatures()"><label for="fun-off">OFF</label>
-                </div>
-                
-                <span class="label">📱 보기 화면 설정 (DPI)</span>
-                <div class="radio-group">
-                    <input type="radio" name="view-mode" id="view-mobile" value="mobile" checked onclick="saveAndApplyTheme()"><label for="view-mobile">스마트폰</label>
-                    <input type="radio" name="view-mode" id="view-tablet" value="tablet" onclick="saveAndApplyTheme()"><label for="view-tablet">태블릿</label>
-                </div>
-                
-                <span class="label">🎨 테마 모드</span>
-                <div class="radio-group">
-                    <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
-                    <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
-                    <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
-                    <input type="radio" name="bg-mode" id="bg-weather" value="weather" onclick="saveAndApplyTheme()"><label for="bg-weather">날씨테마</label>
-                </div>
-
-                <span class="label">🖌️ 포인트 컬러</span>
-                <div class="radio-group">
-                    <input type="radio" name="accent" id="acc-blue" value="blue" checked onclick="saveAndApplyTheme()"><label for="acc-blue">Blue</label>
-                    <input type="radio" name="accent" id="acc-orange" value="orange" onclick="saveAndApplyTheme()"><label for="acc-orange">Org</label>
-                    <input type="radio" name="accent" id="acc-red" value="red" onclick="saveAndApplyTheme()"><label for="acc-red">Red</label>
-                    <input type="radio" name="accent" id="acc-magenta" value="magenta" onclick="saveAndApplyTheme()"><label for="acc-magenta">Mag</label>
-                </div>
+            <span class="label">테마 모드</span>
+            <div class="radio-group">
+                <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
+                <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
+                <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
+                <input type="radio" name="bg-mode" id="bg-weather" value="weather" onclick="saveAndApplyTheme()"><label for="bg-weather">날씨</label>
             </div>
-        </div>
-    </div>
 
-    <div id="custom-alert" onclick="if(event.target == this) this.style.display='none'">
-        <div class="alert-content" onclick="event.stopPropagation()">
-            <div class="alert-msg" id="alert-msg-text"></div>
-            <button class="calc-btn-main" onclick="document.getElementById('custom-alert').style.display='none'" style="width:100%; margin-top:20px; padding:15px; font-size:16px;">확인</button>
+            <span class="label">포인트 컬러</span>
+            <div class="radio-group">
+                <input type="radio" name="accent" id="acc-blue" value="blue" checked onclick="saveAndApplyTheme()"><label for="acc-blue">Blue</label>
+                <input type="radio" name="accent" id="acc-orange" value="orange" onclick="saveAndApplyTheme()"><label for="acc-orange">Org</label>
+                <input type="radio" name="accent" id="acc-red" value="red" onclick="saveAndApplyTheme()"><label for="acc-red">Red</label>
+                <input type="radio" name="accent" id="acc-magenta" value="magenta" onclick="saveAndApplyTheme()"><label for="acc-magenta">Mag</label>
+            </div>
+
+            <span class="label">기능 설정</span>
+            <div class="checkbox-container">
+                <label for="chk-tolerance-placement">일반 근무 탭에 공차계산 배치</label>
+                <input type="checkbox" id="chk-tolerance-placement" onchange="saveToleranceSetting()">
+            </div>
+            <div style="font-size:11px; color:var(--secondary); margin-top:2px; padding-left:4px;">(체크 해제 시 교대근무 탭에 표시됩니다)</div>
         </div>
     </div>
 
 <script>
-    let deviceId = localStorage.getItem('appDeviceId');
-    if (!deviceId) {
-        deviceId = 'DEV-' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('appDeviceId', deviceId);
-    }
-
     let currentMode = localStorage.getItem('mode') || 'rotation';
-    let lastWeatherFetchTime = 0;
-    let currentWeatherStatus = 'clearsky'; // clearsky, cloudy, rain, snow 기본값
-    
     const RAW_DATA = {
         lh: [
             {s:"06:50", e:"07:15", p:"LH"}, {s:"07:20", e:"07:45", p:"휴식"}, {s:"07:50", e:"08:15", p:"RH"}, {s:"08:20", e:"08:50", p:"글라스"},
-            {s:"08:50", e:"09:00", p:"휴게시간"}, {s:"09:00", e:"09:25", p:"LH"}, {s:"09:30", e:"09:55", p:"휴식"}, {s:"10:00", e:"10:25", p:"RH"}, {s:"10:30", e:"11:00", p:"글라스"},
-            {s:"11:00", e:"11:40", p:"점심"}, {s:"11:40", e:"12:05", p:"LH"}, {s:"12:10", e:"12:35", p:"휴식"}, {s:"12:40", e:"13:05", p:"RH"}, {s:"13:10", e:"13:40", p:"글라스"}, 
-            {s:"13:40", e:"13:50", p:"휴게시간"}, {s:"13:50", e:"14:10", p:"LH"}, {s:"14:15", e:"14:35", p:"휴식"}, {s:"14:40", e:"15:00", p:"RH"}, {s:"15:05", e:"15:25", p:"글라스"},
+            {s:"09:00", e:"09:25", p:"LH"}, {s:"09:30", e:"09:55", p:"휴식"}, {s:"10:00", e:"10:25", p:"RH"}, {s:"10:30", e:"11:00", p:"글라스"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"LH"}, {s:"12:10", e:"12:35", p:"휴식"}, {s:"12:40", e:"13:05", p:"RH"},
+            {s:"13:10", e:"13:40", p:"글라스"}, {s:"13:50", e:"14:10", p:"LH"}, {s:"14:15", e:"14:35", p:"휴식"}, {s:"14:40", e:"15:00", p:"RH"}, {s:"15:05", e:"15:25", p:"글라스"},
             {s:"15:35", e:"16:05", p:"LH", n:true}, {s:"16:10", e:"16:35", p:"휴식", n:true}, {s:"16:40", e:"17:05", p:"RH", n:true}, {s:"17:10", e:"17:40", p:"글라스", n:true},
-            {s:"17:40", e:"17:50", p:"휴게시간", n:true}, {s:"17:50", e:"18:15", p:"LH", n:true}, {s:"18:20", e:"18:45", p:"휴식", n:true}, {s:"18:50", e:"19:15", p:"RH", n:true}, {s:"19:20", e:"19:50", p:"글라스", n:true},
-            {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"20:55", p:"LH", n:true}, {s:"21:00", e:"21:25", p:"휴식", n:true}, {s:"21:30", e:"21:55", p:"RH", n:true}, {s:"22:00", e:"22:30", p:"글라스", n:true},
-            {s:"22:30", e:"22:40", p:"휴게시간", n:true}, {s:"22:40", e:"23:00", p:"LH", n:true}, {s:"23:05", e:"23:25", p:"휴식", n:true}, {s:"23:30", e:"23:50", p:"RH", n:true}, {s:"23:55", e:"00:20", p:"글라스", n:true}
+            {s:"17:50", e:"18:15", p:"LH", n:true}, {s:"18:20", e:"18:45", p:"휴식", n:true}, {s:"18:50", e:"19:15", p:"RH", n:true}, {s:"19:20", e:"19:50", p:"글라스", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"LH", n:true}, {s:"21:00", e:"21:25", p:"휴식", n:true}, {s:"21:30", e:"21:55", p:"RH", n:true},
+            {s:"22:00", e:"22:30", p:"글라스", n:true}, {s:"22:40", e:"23:00", p:"LH", n:true}, {s:"23:05", e:"23:25", p:"휴식", n:true}, {s:"23:30", e:"23:50", p:"RH", n:true}, {s:"23:55", e:"00:20", p:"글라스", n:true}
         ],
         rest: [
             {s:"06:50", e:"07:15", p:"휴식"}, {s:"07:20", e:"07:45", p:"RH"}, {s:"07:50", e:"08:15", p:"글라스"}, {s:"08:20", e:"08:50", p:"LH"},
-            {s:"08:50", e:"09:00", p:"휴게시간"}, {s:"09:00", e:"09:25", p:"휴식"}, {s:"09:30", e:"09:55", p:"RH"}, {s:"10:00", e:"10:25", p:"글라스"}, {s:"10:30", e:"11:00", p:"LH"},
-            {s:"11:00", e:"11:40", p:"점심"}, {s:"11:40", e:"12:05", p:"휴식"}, {s:"12:10", e:"12:35", p:"RH"}, {s:"12:40", e:"13:05", p:"글라스"}, {s:"13:10", e:"13:40", p:"LH"},
-            {s:"13:40", e:"13:50", p:"휴게시간"}, {s:"13:50", e:"14:10", p:"휴식"}, {s:"14:15", e:"14:35", p:"RH"}, {s:"14:40", e:"15:00", p:"글라스"}, {s:"15:05", e:"15:25", p:"LH"},
+            {s:"09:00", e:"09:25", p:"휴식"}, {s:"09:30", e:"09:55", p:"RH"}, {s:"10:00", e:"10:25", p:"글라스"}, {s:"10:30", e:"11:00", p:"LH"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"휴식"}, {s:"12:10", e:"12:35", p:"RH"}, {s:"12:40", e:"13:05", p:"글라스"},
+            {s:"13:10", e:"13:40", p:"LH"}, {s:"13:50", e:"14:10", p:"휴식"}, {s:"14:15", e:"14:35", p:"RH"}, {s:"14:40", e:"15:00", p:"글라스"}, {s:"15:05", e:"15:25", p:"LH"},
             {s:"15:35", e:"16:05", p:"휴식", n:true}, {s:"16:10", e:"16:35", p:"RH", n:true}, {s:"16:40", e:"17:05", p:"글라스", n:true}, {s:"17:10", e:"17:40", p:"LH", n:true},
-            {s:"17:40", e:"17:50", p:"휴게시간", n:true}, {s:"17:50", e:"18:15", p:"휴식", n:true}, {s:"18:20", e:"18:45", p:"RH", n:true}, {s:"18:50", e:"19:15", p:"글라스", n:true}, {s:"19:20", e:"19:50", p:"LH", n:true},
-            {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"20:55", p:"휴식", n:true}, {s:"21:00", e:"21:25", p:"RH", n:true}, {s:"21:30", e:"21:55", p:"글라스", n:true}, {s:"22:00", e:"22:30", p:"LH", n:true},
-            {s:"22:30", e:"22:40", p:"휴게시간", n:true}, {s:"22:40", e:"23:00", p:"휴식", n:true}, {s:"23:05", e:"23:25", p:"RH", n:true}, {s:"23:30", e:"23:50", p:"글라스", n:true}, {s:"23:55", e:"00:20", p:"LH", n:true}
+            {s:"17:50", e:"18:15", p:"휴식", n:true}, {s:"18:20", e:"18:45", p:"RH", n:true}, {s:"18:50", e:"19:15", p:"글라스", n:true}, {s:"19:20", e:"19:50", p:"LH", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"휴식", n:true}, {s:"21:00", e:"21:25", p:"RH", n:true}, {s:"21:30", e:"21:55", p:"글라스", n:true},
+            {s:"22:00", e:"22:30", p:"LH", n:true}, {s:"22:40", e:"23:00", p:"휴식", n:true}, {s:"23:05", e:"23:25", p:"RH", n:true}, {s:"23:30", e:"23:50", p:"글라스", n:true}, {s:"23:55", e:"00:20", p:"LH", n:true}
         ],
         rh: [
             {s:"06:50", e:"07:15", p:"RH"}, {s:"07:20", e:"07:45", p:"글라스"}, {s:"07:50", e:"08:15", p:"LH"}, {s:"08:20", e:"08:50", p:"휴식"},
-            {s:"08:50", e:"09:00", p:"휴게시간"}, {s:"09:00", e:"09:25", p:"RH"}, {s:"09:30", e:"09:55", p:"글라스"}, {s:"10:00", e:"10:25", p:"LH"}, {s:"10:30", e:"11:00", p:"휴식"},
-            {s:"11:00", e:"11:40", p:"점심"}, {s:"11:40", e:"12:05", p:"RH"}, {s:"12:10", e:"12:35", p:"글라스"}, {s:"12:40", e:"13:05", p:"LH"}, {s:"13:10", e:"13:40", p:"휴식"},
-            {s:"13:40", e:"13:50", p:"휴게시간"}, {s:"13:50", e:"14:10", p:"RH"}, {s:"14:15", e:"14:35", p:"글라스"}, {s:"14:40", e:"15:00", p:"LH"}, {s:"15:05", e:"15:25", p:"휴식"},
+            {s:"09:00", e:"09:25", p:"RH"}, {s:"09:30", e:"09:55", p:"글라스"}, {s:"10:00", e:"10:25", p:"LH"}, {s:"10:30", e:"11:00", p:"휴식"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"RH"}, {s:"12:10", e:"12:35", p:"글라스"}, {s:"12:40", e:"13:05", p:"LH"},
+            {s:"13:10", e:"13:40", p:"휴식"}, {s:"13:50", e:"14:10", p:"RH"}, {s:"14:15", e:"14:35", p:"글라스"}, {s:"14:40", e:"15:00", p:"LH"}, {s:"15:05", e:"15:25", p:"휴식"},
             {s:"15:35", e:"16:05", p:"RH", n:true}, {s:"16:10", e:"16:35", p:"글라스", n:true}, {s:"16:40", e:"17:05", p:"LH", n:true}, {s:"17:10", e:"17:40", p:"휴식", n:true},
-            {s:"17:40", e:"17:50", p:"휴게시간", n:true}, {s:"17:50", e:"18:15", p:"RH", n:true}, {s:"18:20", e:"18:45", p:"글라스", n:true}, {s:"18:50", e:"19:15", p:"LH", n:true}, {s:"19:20", e:"19:50", p:"휴식", n:true},
-            {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"20:55", p:"RH", n:true}, {s:"21:00", e:"21:25", p:"글라스", n:true}, {s:"21:30", e:"21:55", p:"LH", n:true}, {s:"22:00", e:"22:30", p:"휴식", n:true},
-            {s:"22:30", e:"22:40", p:"휴게시간", n:true}, {s:"22:40", e:"23:00", p:"RH", n:true}, {s:"23:05", e:"23:25", p:"글라스", n:true}, {s:"23:30", e:"23:50", p:"LH", n:true}, {s:"23:55", e:"00:20", p:"휴식", n:true}
+            {s:"17:50", e:"18:15", p:"RH", n:true}, {s:"18:20", e:"18:45", p:"글라스", n:true}, {s:"18:50", e:"19:15", p:"LH", n:true}, {s:"19:20", e:"19:50", p:"휴식", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"RH", n:true}, {s:"21:00", e:"21:25", p:"글라스", n:true}, {s:"21:30", e:"21:55", p:"LH", n:true},
+            {s:"22:00", e:"22:30", p:"휴식", n:true}, {s:"22:40", e:"23:00", p:"RH", n:true}, {s:"23:05", e:"23:25", p:"글라스", n:true}, {s:"23:30", e:"23:50", p:"LH", n:true}, {s:"23:55", e:"00:20", p:"휴식", n:true}
         ],
         glass: [
             {s:"06:50", e:"07:15", p:"글라스"}, {s:"07:20", e:"07:45", p:"LH"}, {s:"07:50", e:"08:15", p:"휴식"}, {s:"08:20", e:"08:50", p:"RH"},
-            {s:"08:50", e:"09:00", p:"휴게시간"}, {s:"09:00", e:"09:25", p:"글라스"}, {s:"09:30", e:"09:55", p:"LH"}, {s:"10:00", e:"10:25", p:"휴식"}, {s:"10:30", e:"11:00", p:"RH"},
-            {s:"11:00", e:"11:40", p:"점심"}, {s:"11:40", e:"12:05", p:"글라스"}, {s:"12:10", e:"12:35", p:"LH"}, {s:"12:40", e:"13:05", p:"휴식"}, {s:"13:10", e:"13:40", p:"RH"},
-            {s:"13:40", e:"13:50", p:"휴게시간"}, {s:"13:50", e:"14:10", p:"글라스"}, {s:"14:15", e:"14:35", p:"LH"}, {s:"14:40", e:"15:00", p:"휴식"}, {s:"15:05", e:"15:25", p:"RH"},
+            {s:"09:00", e:"09:25", p:"글라스"}, {s:"09:30", e:"09:55", p:"LH"}, {s:"10:00", e:"10:25", p:"휴식"}, {s:"10:30", e:"11:00", p:"RH"},
+            {s:"11:00", e:"11:40", p:"점심(휴식)"}, {s:"11:40", e:"12:05", p:"글라스"}, {s:"12:10", e:"12:35", p:"LH"}, {s:"12:40", e:"13:05", p:"휴식"},
+            {s:"13:10", e:"13:40", p:"RH"}, {s:"13:50", e:"14:10", p:"글라스"}, {s:"14:15", e:"14:35", p:"LH"}, {s:"14:40", e:"15:00", p:"휴식"}, {s:"15:05", e:"15:25", p:"RH"},
             {s:"15:35", e:"16:05", p:"글라스", n:true}, {s:"16:10", e:"16:35", p:"LH", n:true}, {s:"16:40", e:"17:05", p:"휴식", n:true}, {s:"17:10", e:"17:40", p:"RH", n:true},
-            {s:"17:40", e:"17:50", p:"휴게시간", n:true}, {s:"17:50", e:"18:15", p:"글라스", n:true}, {s:"18:20", e:"18:45", p:"LH", n:true}, {s:"18:50", e:"19:15", p:"휴식", n:true}, {s:"19:20", e:"19:50", p:"RH", n:true},
-            {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"20:55", p:"글라스", n:true}, {s:"21:00", e:"21:25", p:"LH", n:true}, {s:"21:30", e:"21:55", p:"휴식", n:true}, {s:"22:00", e:"22:30", p:"RH", n:true},
-            {s:"22:30", e:"22:40", p:"휴게시간", n:true}, {s:"22:40", e:"23:00", p:"글라스", n:true}, {s:"23:05", e:"23:25", p:"LH", n:true}, {s:"23:30", e:"23:50", p:"휴식", n:true}, {s:"23:55", e:"00:20", p:"RH", n:true}
+            {s:"17:50", e:"18:15", p:"글라스", n:true}, {s:"18:20", e:"18:45", p:"LH", n:true}, {s:"18:50", e:"19:15", p:"휴식", n:true}, {s:"19:20", e:"19:50", p:"RH", n:true},
+            {s:"19:50", e:"20:30", p:"저녁(휴식)", n:true}, {s:"20:30", e:"20:55", p:"글라스", n:true}, {s:"21:00", e:"21:25", p:"LH", n:true}, {s:"21:30", e:"21:55", p:"휴식", n:true},
+            {s:"22:00", e:"22:30", p:"RH", n:true}, {s:"22:40", e:"23:00", p:"글라스", n:true}, {s:"23:05", e:"23:25", p:"LH", n:true}, {s:"23:30", e:"23:50", p:"휴식", n:true}, {s:"23:55", e:"00:20", p:"RH", n:true}
         ],
         general: [
-            {s:"06:50", e:"08:50", p:"오전 근무", n:false}, {s:"08:50", e:"09:00", p:"휴게시간", n:false},
+            {s:"06:50", e:"08:50", p:"오전 근무", n:false}, {s:"08:50", e:"09:00", p:"휴식", n:false},
             {s:"09:00", e:"11:00", p:"오전 근무", n:false}, {s:"11:00", e:"11:40", p:"점심", n:false},
-            {s:"11:40", e:"13:40", p:"오후 근무", n:false}, {s:"13:40", e:"13:50", p:"휴게시간", n:false},
+            {s:"11:40", e:"13:40", p:"오후 근무", n:false}, {s:"13:40", e:"13:50", p:"휴식", n:false},
             {s:"13:50", e:"15:25", p:"오후 근무", n:false}, {s:"15:35", e:"17:40", p:"야간 근무", n:true},
-            {s:"17:40", e:"17:50", p:"휴게시간", n:true}, {s:"17:50", e:"19:50", p:"야간 근무", n:true},
+            {s:"17:40", e:"17:50", p:"휴식", n:true}, {s:"17:50", e:"19:50", p:"야간 근무", n:true},
             {s:"19:50", e:"20:30", p:"저녁", n:true}, {s:"20:30", e:"22:30", p:"심야 근무", n:true},
-            {s:"22:30", e:"22:40", p:"휴게시간", n:true}, {s:"22:40", e:"00:20", p:"심야 근무", n:true}
+            {s:"22:30", e:"22:40", p:"휴식", n:true}, {s:"22:40", e:"00:20", p:"심야 근무", n:true}
         ]
     };
+
+    // --- 애니메이션 엔진 관련 변수 ---
+    let canvas, ctx, animationFrameId;
+    let raindrops = [];
 
     function toggleSettings(show) {
         document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
     }
 
-    function showCustomAlert(msg) {
-        document.getElementById('alert-msg-text').innerHTML = msg;
-        document.getElementById('custom-alert').style.display = 'flex';
-    }
-
-    function applyFeatures(isFullToggle = false) {
-        localStorage.setItem('feat-calc', document.querySelector('input[name="feat-calc"]:checked').value);
-        localStorage.setItem('feat-weather', document.querySelector('input[name="feat-weather"]:checked').value);
-        
-        const fullOpt = document.querySelector('input[name="feat-full"]:checked').value;
-        localStorage.setItem('feat-full', fullOpt);
-        
-        if(isFullToggle) {
-            try {
-                if (fullOpt === 'on') {
-                    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(e=>console.log(e));
-                    else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
-                } else {
-                    if (document.fullscreenElement || document.webkitFullscreenElement) {
-                        if (document.exitFullscreen) document.exitFullscreen();
-                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                    }
-                }
-            } catch(e) { console.error("Fullscreen API Error:", e); }
-        }
-
-        localStorage.setItem('feat-3d', document.querySelector('input[name="feat-3d"]:checked').value);
-        localStorage.setItem('feat-fun', document.querySelector('input[name="feat-fun"]:checked').value);
-
-        setMode(currentMode);
-        applyBodyClasses();
-    }
-
-    function applyBodyClasses() {
-        if (localStorage.getItem('feat-3d') === 'on') document.body.classList.add('mode-3d');
-        else document.body.classList.remove('mode-3d');
-        
-        if (localStorage.getItem('feat-fun') === 'on') document.body.classList.add('mode-fun');
-        else document.body.classList.remove('mode-fun');
-    }
-
     function saveAndApplyTheme() {
         const bg = document.querySelector('input[name="bg-mode"]:checked').value;
         const acc = document.querySelector('input[name="accent"]:checked').value;
-        const view = document.querySelector('input[name="view-mode"]:checked').value;
-        
         localStorage.setItem('theme-bg', bg);
         localStorage.setItem('theme-acc', acc);
-        localStorage.setItem('theme-view', view);
         
         document.body.className = '';
+        stopRainAnimation();
+
         if (bg === 'dark') document.body.classList.add('dark-mode');
         if (bg === 'oled') document.body.classList.add('oled-mode');
-        if (bg === 'weather') document.body.classList.add('theme-weather-' + currentWeatherStatus);
-        if (view === 'tablet') document.body.classList.add('tablet-mode');
-        
+        if (bg === 'weather') {
+            document.body.classList.add('theme-weather');
+            startRainAnimation();
+        }
         document.body.classList.add('theme-' + acc);
-        applyBodyClasses();
-        renderWeatherEffects();
     }
 
     function loadSavedSettings() {
-        try {
-            const bg = localStorage.getItem('theme-bg') || 'light';
-            const acc = localStorage.getItem('theme-acc') || 'blue';
-            const view = localStorage.getItem('theme-view') || 'mobile';
-            document.getElementById('bg-' + bg).checked = true;
-            document.getElementById('acc-' + acc).checked = true;
-            document.getElementById('view-' + view).checked = true;
-            
-            document.getElementById('calc-' + (localStorage.getItem('feat-calc') || 'on')).checked = true;
-            document.getElementById('weather-' + (localStorage.getItem('feat-weather') || 'on')).checked = true;
-            document.getElementById('full-' + (localStorage.getItem('feat-full') || 'off')).checked = true;
-            document.getElementById('3d-' + (localStorage.getItem('feat-3d') || 'off')).checked = true;
-            document.getElementById('fun-' + (localStorage.getItem('feat-fun') || 'off')).checked = true;
+        const bg = localStorage.getItem('theme-bg') || 'light';
+        const acc = localStorage.getItem('theme-acc') || 'blue';
+        const isGeneralTab = localStorage.getItem('tolerance-in-general') === 'true';
 
-            saveAndApplyTheme();
-            setMode(currentMode);
-            fetchWeather(false);
+        document.getElementById('bg-' + bg).checked = true;
+        document.getElementById('acc-' + acc).checked = true;
+        document.getElementById('chk-tolerance-placement').checked = isGeneralTab;
 
-            if(localStorage.getItem(`${deviceId}_calcActive`) === 'true') {
-                document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currDisplay`) || localStorage.getItem(`${deviceId}_initCurrCar`);
-                document.getElementById('target-car').value = localStorage.getItem(`${deviceId}_targetCar`) || '';
-                runCalc(false);
-            }
-        } catch(e) { console.error("로딩 에러:", e); }
+        saveAndApplyTheme();
+        setMode(currentMode);
+        fetchWeatherMock(); // 초기 기상 분석 로드
+    }
+
+    // 공차 계산 옵션 세팅 저장 및 리렌더링 트리거
+    function saveToleranceSetting() {
+        const checked = document.getElementById('chk-tolerance-placement').checked;
+        localStorage.setItem('tolerance-in-general', checked);
+        renderToleranceComponent();
+    }
+
+    // 공차 계산 컴포넌트의 가시성 제어 스위처
+    function renderToleranceComponent() {
+        const container = document.getElementById('tolerance-placement-zone');
+        const targetTabInGeneral = localStorage.getItem('tolerance-in-general') === 'true';
+        
+        // 현재 탭 상태와 설정 창 매칭 여부 체크
+        const shouldShow = (targetTabInGeneral && currentMode === 'general') || (!targetTabInGeneral && currentMode === 'rotation');
+        
+        if (shouldShow) {
+            container.innerHTML = `
+                <div class="tolerance-box">
+                    <div style="font-size:14px; font-weight:700; margin-bottom:4px;">📐 실시간 공차 자동 계산기</div>
+                    <div style="font-size:12px; opacity:0.8;">현재 차번 및 타깃 편차 분석 대기 중</div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '';
+        }
     }
 
     function setMode(mode) {
@@ -488,254 +347,88 @@
         document.getElementById('tab-general').classList.toggle('active', mode === 'general');
         document.getElementById('position-section').style.display = mode === 'rotation' ? 'block' : 'none';
         
-        document.getElementById('general-extra').style.display = (mode === 'general' && (localStorage.getItem('feat-calc') || 'on') === 'on') ? 'block' : 'none';
-        document.getElementById('weather-section').style.display = (localStorage.getItem('feat-weather') || 'on') === 'on' ? 'block' : 'none';
-        
+        renderToleranceComponent();
         update();
     }
 
-    // [Yr.no API 데이터 Fetch 및 매핑]
-    async function fetchWeather(isManual = false) {
-        const weatherUiEnabled = (localStorage.getItem('feat-weather') || 'on') === 'on';
-        if(!weatherUiEnabled) return;
+    // --- 가상 기상 관측소 API 가공 및 데이터 마운트 ---
+    function fetchWeatherMock() {
+        // 실제 현업망 환경 연동 시 기상청 오픈 API 또는 공공데이터 포털 좌표값 GET 호출 구간
+        setTimeout(() => {
+            const mockRainProbability = 85; 
+            const mockPrecipitation = 4.2;  
 
-        const now = Date.now();
-        // 5분 캐싱 보호 (수동 요청 제외)
-        if (!isManual && now - lastWeatherFetchTime < 300000 && lastWeatherFetchTime !== 0) return;
-
-        const lat = 37.442; // 소하리공장 위도
-        const lon = 126.890; // 소하리공장 경도
-        const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`;
-
-        try {
-            // Yr API 호출 규약상 User-Agent 설정 안내 대응
-            const response = await fetch(url);
-            if(!response.ok) throw new Error('네트워크 응답 불량');
-            const data = await response.json();
-            
-            lastWeatherFetchTime = now;
-            localStorage.setItem('weather_last_ts', lastWeatherFetchTime);
-            localStorage.setItem('weather_cache_data', JSON.stringify(data));
-            
-            parseAndRenderWeather(data);
-            if(isManual) showCustomAlert("기상 정보가 최신으로 동기화되었습니다.");
-        } catch (error) {
-            console.error("날씨 정보 요청 실패, 캐시 조회:", error);
-            const cached = localStorage.getItem('weather_cache_data');
-            if(cached) parseAndRenderWeather(JSON.parse(cached));
-        }
+            document.getElementById('weather-status').innerText = `🌧️ 현재 위치 비 내림 (흐림)`;
+            document.getElementById('weather-details').innerText = `강수확률: ${mockRainProbability}% | 강수량: ${mockPrecipitation}mm`;
+        }, 800);
     }
 
-    function parseAndRenderWeather(data) {
-        const timeseries = data.properties.timeseries;
-        const hourlyContainer = document.getElementById('weather-hourly-list');
-        hourlyContainer.innerHTML = '';
-
-        const nowObj = new Date();
-        let currentStatusMapped = 'clearsky';
-        let currentSummaryText = '';
-
-        // 최대 24시간 동안의 시간별 예보 파싱
-        let count = 0;
-        for (let i = 0; i < timeseries.length && count < 24; i++) {
-            const item = timeseries[i];
-            const itemTime = new Date(item.time);
-            
-            // 지난 시간 제외
-            if (itemTime.getTime() < nowObj.getTime() - 3500000) continue;
-
-            const temp = Math.round(item.data.instant.details.air_temperature);
-            const symbolCode = item.data.next_1_hours ? item.data.next_1_hours.summary.symbol_code : item.data.next_6_hours.summary.symbol_code;
-            const pop = item.data.next_1_hours?.details?.probability_of_precipitation ?? item.data.next_6_hours?.details?.probability_of_precipitation ?? 0;
-
-            // Yr 심볼 매핑 알고리즘
-            let emoji = '☀️';
-            let statusKey = 'clearsky';
-            let krDesc = '화창';
-
-            if (symbolCode.includes('rain') || symbolCode.includes('sleet')) { emoji = '🌧️'; statusKey = 'rain'; krDesc = '비'; }
-            else if (symbolCode.includes('snow')) { emoji = '❄️'; statusKey = 'snow'; krDesc = '눈'; }
-            else if (symbolCode.includes('cloudy')) { emoji = '☁️'; statusKey = 'cloudy'; krDesc = '흐림'; }
-            else if (symbolCode.includes('fair') || symbolCode.includes('partlycloudy')) { emoji = '⛅'; statusKey = 'clearsky'; krDesc = '구름 조금'; }
-
-            const displayHour = String(itemTime.getHours()).padStart(2, '0') + "시";
-            const isNowItem = count === 0;
-
-            if (isNowItem) {
-                currentStatusMapped = statusKey;
-                currentSummaryText = `${krDesc} ${temp}℃`;
-                document.getElementById('weather-main-summary').innerText = currentSummaryText;
-            }
-
-            const hourCard = document.createElement('div');
-            hourCard.className = `weather-hourly-item ${isNowItem ? 'is-now' : ''}`;
-            hourCard.innerHTML = `
-                <span class="weather-time">${isNowItem ? '현재' : displayHour}</span>
-                <span class="weather-icon">${emoji}</span>
-                <span class="weather-temp">${temp}°</span>
-                <span class="weather-pop">${pop > 10 ? pop + '%' : ''}</span>
-            `;
-            hourlyContainer.appendChild(hourCard);
-            count++;
-        }
-
-        currentWeatherStatus = currentStatusMapped;
-        updateWeatherRefreshLabel();
-
-        // 테마 모드가 '날씨테마'일 경우 바디 클래스 즉시 동적 리프레시
-        if (localStorage.getItem('theme-bg') === 'weather') {
-            saveAndApplyTheme();
-        }
-    }
-
-    function updateWeatherRefreshLabel() {
-        if (lastWeatherFetchTime === 0) {
-            const savedTs = localStorage.getItem('weather_last_ts');
-            if(savedTs) lastWeatherFetchTime = parseInt(savedTs);
-            else return;
-        }
-        const diffMin = Math.floor((Date.now() - lastWeatherFetchTime) / 60000);
-        document.getElementById('weather-last-updated').innerText = diffMin <= 0 ? '방금 전' : `${diffMin}분 전`;
-    }
-
-    // [실시간 백그라운드 날씨 이펙트 파티클 제어]
-    function renderWeatherEffects() {
-        const container = document.getElementById('weather-canvas-container');
-        container.innerHTML = '';
+    // --- 고성능 가상 비주얼 렌더링 엔진 (Canvas 기반 60FPS) ---
+    function initRainEngine() {
+        canvas = document.getElementById('weather-canvas');
+        if (!canvas) return;
+        ctx = canvas.getContext('2d');
         
-        const isWeatherTheme = localStorage.getItem('theme-bg') === 'weather';
-        if (!isWeatherTheme) return;
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-        if (currentWeatherStatus === 'rain') {
-            for (let i = 0; i < 40; i++) {
-                let drop = document.createElement('div');
-                drop.className = 'rain-drop';
-                drop.style.left = Math.random() * 100 + 'vw';
-                drop.style.top = Math.random() * -50 + 'px';
-                drop.style.animationDuration = 0.5 + Math.random() * 0.5 + 's';
-                drop.style.animationDelay = Math.random() * 2 + 's';
-                container.appendChild(drop);
-            }
-        } else if (currentWeatherStatus === 'snow') {
-            for (let i = 0; i < 30; i++) {
-                let flake = document.createElement('div');
-                flake.className = 'snow-flake';
-                const size = 2 + Math.random() * 5 + 'px';
-                flake.style.width = size;
-                flake.style.height = size;
-                flake.style.left = Math.random() * 100 + 'vw';
-                flake.style.top = Math.random() * -20 + 'px';
-                flake.style.animationDuration = 2 + Math.random() * 3 + 's';
-                flake.style.animationDelay = Math.random() * 5 + 's';
-                container.appendChild(flake);
-            }
+        raindrops = [];
+        for (let i = 0; i < 75; i++) {
+            raindrops.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                length: Math.random() * 20 + 15,
+                speed: Math.random() * 8 + 12,
+                opacity: Math.random() * 0.3 + 0.15
+            });
         }
     }
 
-    function saveCurrCar() {
-        const curr = parseInt(document.getElementById('curr-car').value);
-        if(curr) {
-            localStorage.setItem(`${deviceId}_initCurrCar`, curr);
-            localStorage.setItem(`${deviceId}_calcStartMs`, Date.now());
-            runCalc(false);
+    function resizeCanvas() {
+        if(canvas) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
     }
 
-    function startCalc() {
-        const curr = parseInt(document.getElementById('curr-car').value);
-        const target = parseInt(document.getElementById('target-car').value);
-
-        if (!curr || !target || target <= curr) {
-            showCustomAlert("차번을 올바르게 입력해주세요.<br><br><span style='font-size:14px; color:var(--secondary);'>공바디 번호가 더 커야 합니다.</span>");
-            localStorage.setItem(`${deviceId}_calcActive`, 'false');
-            return;
-        }
+    function drawRainFrame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(174, 219, 255, 0.6)';
+        ctx.lineWidth = 1.5;
         
-        localStorage.setItem(`${deviceId}_initCurrCar`, curr);
-        localStorage.setItem(`${deviceId}_targetCar`, target);
-        localStorage.setItem(`${deviceId}_calcStartMs`, Date.now());
-        localStorage.setItem(`${deviceId}_calcActive`, 'true');
-        runCalc(true);
-    }
-
-    function runCalc(showPopup = false) {
-        if (localStorage.getItem(`${deviceId}_calcActive`) !== 'true') return;
-        if ((localStorage.getItem('feat-calc') || 'on') !== 'on' || currentMode !== 'general') return;
-
-        const initCurr = parseInt(localStorage.getItem(`${deviceId}_initCurrCar`));
-        const target = parseInt(localStorage.getItem(`${deviceId}_targetCar`));
-        const startMs = parseInt(localStorage.getItem(`${deviceId}_calcStartMs`));
-        
-        if (!initCurr || !target || !startMs) return;
-
-        const nowMs = Date.now();
-        const startObj = new Date(startMs);
-        const startMinsOfDay = startObj.getHours() * 60 + startObj.getMinutes();
-        
-        const breaks = [
-            {n: '오전 휴게시간', s: 530, e: 540}, {n: '점심시간', s: 660, e: 700}, {n: '오후 휴게시간', s: 820, e: 830},
-            {n: '야간 휴게시간', s: 1060, e: 1070}, {n: '저녁시간', s: 1190, e: 1230}, {n: '심야 휴게시간', s: 1350, e: 1360}
-        ];
-
-        let totalWorkMins = (target - initCurr) * (10 / 6.5);
-        let simMins = startMinsOfDay;
-        let breaksEncountered = new Set();
-        let remWork = totalWorkMins;
-
-        while(remWork > 0) {
-            let dayMin = simMins % 1440;
-            let inBreak = false;
-            for (let b of breaks) {
-                if (dayMin >= b.s && dayMin < b.e) {
-                    breaksEncountered.add(b.n);
-                    inBreak = true; break;
-                }
-            }
-            simMins++;
-            if (!inBreak) remWork--;
-        }
-
-        const realElapsedTotalMins = Math.round(simMins - startMinsOfDay);
-        const etaObj = new Date(startMs + realElapsedTotalMins * 60000);
-        const fh = String(etaObj.getHours()).padStart(2, '0');
-        const fm = String(etaObj.getMinutes()).padStart(2, '0');
-
-        let currentAutoCar = initCurr;
-        let elapsedWorkMins = 0;
-        let minDiff = Math.floor((nowMs - startMs) / 60000);
-
-        if (minDiff > 0) {
-            for (let i = 0; i < minDiff; i++) {
-                let dayMin = (startMinsOfDay + i) % 1440;
-                let inBreak = false;
-                for (let b of breaks) {
-                    if (dayMin >= b.s && dayMin < b.e) { inBreak = true; break; }
-                }
-                if (!inBreak) elapsedWorkMins++;
-            }
-        }
-
-        if (minDiff >= 10) {
-            currentAutoCar = initCurr + Math.floor(elapsedWorkMins / (10 / 6.5));
-            localStorage.setItem(`${deviceId}_currDisplay`, currentAutoCar); 
+        for (let i = 0; i < raindrops.length; i++) {
+            let p = raindrops[i];
+            ctx.beginPath();
+            // 현실감 있는 빗줄기 낙하 각도 구현 (사선 하강 처리)
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + 2, p.y + p.length);
+            ctx.stroke();
             
-            const currInput = document.getElementById('curr-car');
-            if (document.activeElement !== currInput) {
-                currInput.value = currentAutoCar;
+            p.y += p.speed;
+            p.x += 0.5; 
+            
+            if (p.y > canvas.height) {
+                p.y = -p.length;
+                p.x = Math.random() * canvas.width;
             }
         }
+        animationFrameId = requestAnimationFrame(drawRainFrame);
+    }
 
-        let remainingRealMins = Math.max(0, Math.floor((etaObj.getTime() - nowMs) / 60000));
-        document.getElementById('calc-result').innerHTML = 
-            `현재 진행 차번은 약 <b>${currentAutoCar}</b> 이며 <b>${target}</b> 까지는 <b>${remainingRealMins}</b>분이 남았습니다.<br>
-            <span style="color:var(--primary); font-size:16px; margin-top:5px; display:inline-block; font-weight:800;">공바디 도착 예상시간은 ${fh}:${fm} 분입니다.</span>`;
+    function startRainAnimation() {
+        const cvs = document.getElementById('weather-canvas');
+        if(cvs) cvs.style.display = 'block';
+        initRainEngine();
+        drawRainFrame();
+    }
 
-        if (showPopup) {
-            let bArr = Array.from(breaksEncountered);
-            let bStr = bArr.length > 0 ? `<span style="color:var(--secondary); font-size:14px;">(${bArr.join(', ')} 제외)</span><br><br>해당 시간을 제외하고 계산했을 때,` : '휴게시간 간섭 없이 계산했을 때,';
-            let msg = `${bStr}<br><span style="font-size:26px; font-weight:900; color:var(--primary); margin-top:10px; display:inline-block;">도착 예상시간은 ${fh}:${fm} 입니다.</span>`;
-            showCustomAlert(msg);
+    function stopRainAnimation() {
+        const cvs = document.getElementById('weather-canvas');
+        if(cvs) cvs.style.display = 'none';
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
         }
+        window.removeEventListener('resize', resizeCanvas);
     }
 
     function update() {
@@ -745,11 +438,12 @@
         const nowMin = now.getHours() * 60 + now.getMinutes();
         const nowSec = now.getSeconds();
         
-        const shiftElement = document.querySelector('input[name="shift"]:checked');
-        if(!shiftElement) return;
-        const shiftVal = shiftElement.value;
+        const activeShiftElement = document.querySelector('input[name="shift"]:checked');
+        if (!activeShiftElement) return;
+        const shiftVal = activeShiftElement.value;
         
-        let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[document.querySelector('input[name="pos"]:checked').value];
+        const activePosElement = document.querySelector('input[name="pos"]:checked');
+        let targetData = currentMode === 'general' ? RAW_DATA.general : RAW_DATA[activePosElement ? activePosElement.value : 'lh'];
         const currentSchedule = targetData.filter(item => shiftVal === "night" ? item.n : !item.n);
 
         let checkMin = nowMin;
@@ -764,7 +458,6 @@
             if (end < start) end += 1440;
             item._start = start; item._end = end;
         });
-
         const label = document.getElementById('countdown-label');
         const timer = document.getElementById('timer-text');
         const task = document.getElementById('current-task');
@@ -772,54 +465,40 @@
         const firstShift = currentSchedule[0];
         const lastShift = currentSchedule[currentSchedule.length - 1];
         
-        let currentShift = currentSchedule.find(i => checkMin >= i._start && checkMin < i._end);
-        let nextShift = currentSchedule.find(i => checkMin < i._start);
-
-        if (currentShift) {
-            let nextIdx = currentSchedule.indexOf(currentShift) + 1;
-            let nxt = currentSchedule[nextIdx];
-            let diffSec = (currentShift._end * 60) - (checkMin * 60 + nowSec);
-            timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
-            
-            if (currentShift.p === "점심" || currentShift.p === "저녁") {
-                label.innerText = "식사시간입니다.";
-                task.innerText = "식사 맛있게 하십시오.";
-            } else if (currentShift.p === "휴게시간") {
-                label.innerText = "휴게시간입니다.";
-                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
-            } else if (currentShift.p === "휴식") {
-                label.innerText = "휴식시간입니다.";
-                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
-            } else {
-                if (diffSec <= 600 && nxt) {
-                    if (nxt.p === "점심" || nxt.p === "저녁") label.innerText = "곧 식사 시간입니다";
-                    else if (nxt.p === "휴게시간" || nxt.p === "휴식") label.innerText = "곧 쉬는 시간입니다";
-                    else label.innerText = currentMode === 'general' ? "다음 근무 시작까지" : "남은 교대까지";
-                } else {
-                    label.innerText = currentMode === 'general' ? "다음 근무 시작까지" : "남은 교대까지";
-                }
-                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
-            }
-        } else if (nextShift && checkMin >= firstShift._start && checkMin < lastShift._end) {
-            let diffSec = (nextShift._start * 60) - (checkMin * 60 + nowSec);
-            timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
-            
-            if (currentMode === 'rotation') {
-                label.innerText = "교대시간입니다.";
-                task.innerText = `다음 근무: ${nextShift.p} (${nextShift.s} 시작)`;
-            } else {
-                label.innerText = "대기시간입니다.";
-                task.innerText = `다음 일정: ${nextShift.p}`;
-            }
-        } else {
+        if (!firstShift || checkMin < firstShift._start || checkMin >= lastShift._end) {
             timer.innerText = "--:--";
             label.innerText = "OFF"; 
             task.innerText = "퇴근입니다. 오늘 하루도 고생 많으셨습니다.";
+            renderList(currentSchedule, null); return;
         }
 
+        let currentShift = currentSchedule.find(i => checkMin >= i._start && checkMin < i._end);
+        let nextIdx = currentSchedule.findIndex(i => checkMin >= i._start && checkMin < i._end) + 1;
+        let nextShift = currentSchedule[nextIdx];
+        if (currentShift) {
+            let diffSec = (currentShift._end * 60) - (checkMin * 60 + nowSec);
+            timer.innerText = `${String(Math.floor(diffSec / 60)).padStart(2, '0')}:${String(diffSec % 60).padStart(2, '0')}`;
+            
+            if (currentMode === 'general') {
+                if (currentShift.p.includes("점심") || currentShift.p.includes("저녁") || currentShift.p.includes("휴식")) {
+                    label.innerText = "다음 근무 시작까지";
+                    task.innerText = `${currentShift.p} 시간 (${currentShift.s}~${currentShift.e})`;
+                } else {
+                    if (diffSec <= 600 && nextShift) {
+                        if (nextShift.p.includes("점심") || nextShift.p.includes("저녁")) label.innerText = "곧 식사 시간입니다";
+                        else if (nextShift.p.includes("휴식")) label.innerText = "곧 쉬는 시간입니다";
+                        else label.innerText = "다음 근무 시작까지";
+                    } else {
+                        label.innerText = "다음 근무 시작까지";
+                    }
+                    task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
+                }
+            } else {
+                label.innerText = "남은 교대까지";
+                task.innerText = `현재: ${currentShift.p} (${currentShift.s}~${currentShift.e})`;
+            }
+        }
         renderList(currentSchedule, currentShift);
-        if(currentMode === 'general') runCalc(false);
-        updateWeatherRefreshLabel();
     }
 
     function renderList(list, currentShift) {
@@ -834,15 +513,7 @@
 
     document.querySelectorAll('input').forEach(input => input.addEventListener('change', update));
     window.onload = loadSavedSettings;
-    
-    // 1초 메인 타임루프 루틴
     setInterval(update, 1000);
-    
-    // 5분(300,000ms) 주기 외부 날씨 데이터 자동갱신 루프 설정
-    setInterval(function() {
-        fetchWeather(false);
-    }, 300000);
 </script>
 </body>
 </html>
-
