@@ -13,6 +13,7 @@
             --secondary: #8E8E93;
             --primary: #007AFF; 
             --tab-bg: #E3E3E8;
+            --weather-effect-bg: transparent;
         }
 
         /* 다크 모드 (일반) */
@@ -39,6 +40,12 @@
         body.theme-magenta { --primary: #AF52DE; }
         body.theme-blue { --primary: #007AFF; }
 
+        /* 날씨 상태별 배경 테마 (날씨 테마 선택시 활성화) */
+        body.theme-weather-clearsky { --bg: linear-gradient(135deg, #74ABE2 0%, #5579C6 100%); --card: rgba(255,255,255,0.85); --text: #1C1C1E; --tab-bg: rgba(0,0,0,0.08); }
+        body.theme-weather-cloudy { --bg: linear-gradient(135deg, #8A95A5 0%, #5C6672 100%); --card: rgba(255,255,255,0.2); --text: #FFFFFF; --tab-bg: rgba(255,255,255,0.1); --secondary: #E5E5EA; --primary: #FFCC00;}
+        body.theme-weather-rain { --bg: linear-gradient(135deg, #4B5762 0%, #2B333C 100%); --card: rgba(255,255,255,0.15); --text: #FFFFFF; --tab-bg: rgba(255,255,255,0.1); --secondary: #D1D1D6; --primary: #64D2FF;}
+        body.theme-weather-snow { --bg: linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%); --card: rgba(255,255,255,0.75); --text: #1C1C1E; --tab-bg: rgba(0,0,0,0.05); }
+
         body { 
             font-family: -apple-system, sans-serif; 
             background: var(--bg); 
@@ -46,9 +53,23 @@
             margin: 0; padding: 20px; 
             transition: background 0.3s, color 0.3s, padding 0.3s;
             padding-top: env(safe-area-inset-top);
+            position: relative;
+            overflow-x: hidden;
         }
 
-        .container { max-width: 500px; margin: auto; position: relative; transition: max-width 0.3s; }
+        /* 날씨 이펙트 컨테이너 */
+        #weather-canvas-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1; overflow: hidden;
+        }
+        .rain-drop { position: absolute; background: linear-gradient(transparent, #A1C4FD); width: 1px; height: 40px; opacity: 0.7; animation: fall linear infinite; }
+        .snow-flake { position: absolute; background: #FFFFFF; border-radius: 50%; opacity: 0.8; animation: fall linear infinite; }
+        @keyframes fall {
+            0% { transform: translateY(-50px) translateX(0); }
+            100% { transform: translateY(100vh) translateX(20px); }
+        }
+
+        .container { max-width: 500px; margin: auto; position: relative; transition: max-width 0.3s; z-index: 2; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; transition: 0.3s, text-shadow 0.3s, color 0.3s; }
@@ -58,7 +79,7 @@
         .tab-btn { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: bold; color: var(--secondary); border-radius: 11px; cursor: pointer; border: none; background: transparent; transition: 0.2s; }
         .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
 
-        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; transition: 0.3s; }
+        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; transition: 0.3s; backdrop-filter: blur(5px); }
         #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 800; height: 1.2em; transition: 0.3s; }
         #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; transition: 0.3s, text-shadow 0.3s, color 0.3s; }
         #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; transition: 0.3s; }
@@ -69,7 +90,7 @@
         .radio-group input { display: none; }
         .radio-group input:checked + label { background: var(--card); box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-weight: bold; color: var(--primary); }
 
-        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; }
+        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; backdrop-filter: blur(5px); }
         .schedule-item { padding: 14px 18px; border-bottom: 0.5px solid var(--tab-bg); display: flex; justify-content: space-between; font-size: 13px; transition: 0.3s; }
         .schedule-item:last-child { border-bottom: none; }
         .schedule-item.active-now { background: var(--tab-bg); border-radius: 14px; color: var(--primary); font-weight: bold; }
@@ -80,6 +101,23 @@
         .calc-btn-sub { padding: 0 15px; background: var(--tab-bg); color: var(--text); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .calc-btn-main { padding: 0 15px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.3s; }
         .calc-result-box { margin-top: 12px; padding: 15px; background: var(--bg); border-radius: 12px; font-size: 14px; color: var(--text); line-height: 1.6; font-weight: 500; text-align: center; transition: 0.3s; }
+
+        /* 날씨 섹션 UI */
+        .weather-card { padding: 15px; margin-top: 10px; text-align: left; }
+        .weather-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .weather-title { font-size: 13px; font-weight: bold; color: var(--text); display: flex; align-items: center; gap: 5px; }
+        .weather-refresh-group { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--secondary); }
+        .weather-refresh-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px; color: var(--text); transition: transform 0.2s; }
+        .weather-refresh-btn:active { transform: scale(0.85); }
+        
+        .weather-scroll-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none; }
+        .weather-scroll-container::-webkit-scrollbar { display: none; }
+        .weather-hourly-item { flex-shrink: 0; width: 68px; background: var(--tab-bg); border-radius: 12px; padding: 10px 5px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.3s; }
+        .weather-hourly-item.is-now { border: 1.5px solid var(--primary); background: var(--card); }
+        .weather-time { font-size: 11px; font-weight: 600; opacity: 0.8; }
+        .weather-icon { font-size: 20px; margin: 2px 0; }
+        .weather-temp { font-size: 13px; font-weight: bold; }
+        .weather-pop { font-size: 10px; color: #007AFF; font-weight: bold; }
 
         /* 설정 모달 */
         #settings-modal { 
@@ -93,7 +131,7 @@
         }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 800; font-size: 18px; flex-shrink: 0; }
         .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
-        .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; } /* 스크롤 영역 추가 */
+        .modal-body { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
         .modal-body::-webkit-scrollbar { width: 6px; }
         .modal-body::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 10px; }
 
@@ -113,7 +151,7 @@
             text-shadow: 1px 1px 0px rgba(120,120,120,0.4), 2px 2px 0px rgba(120,120,120,0.2), 3px 3px 5px rgba(0,0,0,0.3); 
         }
 
-        /* FUN (RGB) 모드 - 필터 대신 색상을 지속적으로 변경하여 성능과 가독성 확보 */
+        /* FUN (RGB) 모드 */
         @keyframes rgbColors {
             0% { color: #FF3B30; }
             25% { color: #FF9500; }
@@ -142,9 +180,16 @@
         body.tablet-mode .modal-content, body.tablet-mode .alert-content { max-width: 450px; padding: 35px; }
         body.tablet-mode .modal-header { font-size: 22px; }
         body.tablet-mode .alert-msg { font-size: 20px; }
+        body.tablet-mode .weather-hourly-item { width: 90px; padding: 15px 5px; }
+        body.tablet-mode .weather-time { font-size: 14px; }
+        body.tablet-mode .weather-icon { font-size: 28px; }
+        body.tablet-mode .weather-temp { font-size: 16px; }
+        body.tablet-mode .weather-pop { font-size: 12px; }
     </style>
 </head>
 <body class="theme-blue">
+
+    <div id="weather-canvas-container"></div>
 
     <div class="container">
         <div class="header">
@@ -200,6 +245,21 @@
         <div class="schedule-card">
             <div id="schedule-list"></div>
         </div>
+
+        <div id="weather-section" style="display: block;">
+            <span class="label">소하리 공장 실시간 기상 현황 (Yr 연동)</span>
+            <div class="card weather-card">
+                <div class="weather-top">
+                    <div class="weather-title">📍 광명 소하리 <span id="weather-main-summary">-</span></div>
+                    <div class="weather-refresh-group">
+                        <span id="weather-last-updated">업데이트 전</span>
+                        <button class="weather-refresh-btn" onclick="fetchWeather(true)">🔄</button>
+                    </div>
+                </div>
+                <div class="weather-scroll-container" id="weather-hourly-list">
+                    </div>
+            </div>
+        </div>
     </div>
 
     <div id="settings-modal" onclick="if(event.target == this) toggleSettings(false)">
@@ -214,6 +274,10 @@
                 <div class="radio-group">
                     <input type="radio" name="feat-calc" id="calc-on" value="on" checked onclick="applyFeatures()"><label for="calc-on">공차계산 ON</label>
                     <input type="radio" name="feat-calc" id="calc-off" value="off" onclick="applyFeatures()"><label for="calc-off">OFF</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" name="feat-weather" id="weather-on" value="on" checked onclick="applyFeatures()"><label for="weather-on">날씨 UI ON</label>
+                    <input type="radio" name="feat-weather" id="weather-off" value="off" onclick="applyFeatures()"><label for="weather-off">OFF</label>
                 </div>
                 <div class="radio-group">
                     <input type="radio" name="feat-full" id="full-on" value="on" onclick="applyFeatures(true)"><label for="full-on">전체화면 ON</label>
@@ -241,6 +305,7 @@
                     <input type="radio" name="bg-mode" id="bg-light" value="light" checked onclick="saveAndApplyTheme()"><label for="bg-light">라이트</label>
                     <input type="radio" name="bg-mode" id="bg-dark" value="dark" onclick="saveAndApplyTheme()"><label for="bg-dark">다크</label>
                     <input type="radio" name="bg-mode" id="bg-oled" value="oled" onclick="saveAndApplyTheme()"><label for="bg-oled">OLED</label>
+                    <input type="radio" name="bg-mode" id="bg-weather" value="weather" onclick="saveAndApplyTheme()"><label for="bg-weather">날씨테마</label>
                 </div>
 
                 <span class="label">🖌️ 포인트 컬러</span>
@@ -269,6 +334,8 @@
     }
 
     let currentMode = localStorage.getItem('mode') || 'rotation';
+    let lastWeatherFetchTime = 0;
+    let currentWeatherStatus = 'clearsky'; // clearsky, cloudy, rain, snow 기본값
     
     const RAW_DATA = {
         lh: [
@@ -332,22 +399,17 @@
     }
 
     function applyFeatures(isFullToggle = false) {
-        // 공차 계산 토글 저장
-        const calcOpt = document.querySelector('input[name="feat-calc"]:checked').value;
-        localStorage.setItem('feat-calc', calcOpt);
+        localStorage.setItem('feat-calc', document.querySelector('input[name="feat-calc"]:checked').value);
+        localStorage.setItem('feat-weather', document.querySelector('input[name="feat-weather"]:checked').value);
         
-        // 전체화면 토글 로직
         const fullOpt = document.querySelector('input[name="feat-full"]:checked').value;
         localStorage.setItem('feat-full', fullOpt);
         
         if(isFullToggle) {
             try {
                 if (fullOpt === 'on') {
-                    if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen().catch(e=>console.log(e));
-                    } else if (document.documentElement.webkitRequestFullscreen) {
-                        document.documentElement.webkitRequestFullscreen();
-                    }
+                    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(e=>console.log(e));
+                    else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
                 } else {
                     if (document.fullscreenElement || document.webkitFullscreenElement) {
                         if (document.exitFullscreen) document.exitFullscreen();
@@ -357,26 +419,18 @@
             } catch(e) { console.error("Fullscreen API Error:", e); }
         }
 
-        // 3D 텍스트 토글
-        const tdOpt = document.querySelector('input[name="feat-3d"]:checked').value;
-        localStorage.setItem('feat-3d', tdOpt);
-        
-        // FUN (RGB) 토글
-        const funOpt = document.querySelector('input[name="feat-fun"]:checked').value;
-        localStorage.setItem('feat-fun', funOpt);
+        localStorage.setItem('feat-3d', document.querySelector('input[name="feat-3d"]:checked').value);
+        localStorage.setItem('feat-fun', document.querySelector('input[name="feat-fun"]:checked').value);
 
-        setMode(currentMode); // 변경된 옵션(공차계산 UI 등) 즉시 반영
-        applyBodyClasses(); // 3D 및 FUN 클래스 적용
+        setMode(currentMode);
+        applyBodyClasses();
     }
 
     function applyBodyClasses() {
-        const tdOpt = localStorage.getItem('feat-3d') || 'off';
-        const funOpt = localStorage.getItem('feat-fun') || 'off';
-        
-        if (tdOpt === 'on') document.body.classList.add('mode-3d');
+        if (localStorage.getItem('feat-3d') === 'on') document.body.classList.add('mode-3d');
         else document.body.classList.remove('mode-3d');
         
-        if (funOpt === 'on') document.body.classList.add('mode-fun');
+        if (localStorage.getItem('feat-fun') === 'on') document.body.classList.add('mode-fun');
         else document.body.classList.remove('mode-fun');
     }
 
@@ -392,15 +446,16 @@
         document.body.className = '';
         if (bg === 'dark') document.body.classList.add('dark-mode');
         if (bg === 'oled') document.body.classList.add('oled-mode');
+        if (bg === 'weather') document.body.classList.add('theme-weather-' + currentWeatherStatus);
         if (view === 'tablet') document.body.classList.add('tablet-mode');
-        document.body.classList.add('theme-' + acc);
         
+        document.body.classList.add('theme-' + acc);
         applyBodyClasses();
+        renderWeatherEffects();
     }
 
     function loadSavedSettings() {
         try {
-            // 기본 UI 테마 설정 복원
             const bg = localStorage.getItem('theme-bg') || 'light';
             const acc = localStorage.getItem('theme-acc') || 'blue';
             const view = localStorage.getItem('theme-view') || 'mobile';
@@ -408,19 +463,15 @@
             document.getElementById('acc-' + acc).checked = true;
             document.getElementById('view-' + view).checked = true;
             
-            // 확장 기능(공차, 전체화면, 3D, FUN) 복원
-            const calcOpt = localStorage.getItem('feat-calc') || 'on';
-            const fullOpt = localStorage.getItem('feat-full') || 'off';
-            const tdOpt = localStorage.getItem('feat-3d') || 'off';
-            const funOpt = localStorage.getItem('feat-fun') || 'off';
-            
-            document.getElementById('calc-' + calcOpt).checked = true;
-            document.getElementById('full-' + fullOpt).checked = true;
-            document.getElementById('3d-' + tdOpt).checked = true;
-            document.getElementById('fun-' + funOpt).checked = true;
+            document.getElementById('calc-' + (localStorage.getItem('feat-calc') || 'on')).checked = true;
+            document.getElementById('weather-' + (localStorage.getItem('feat-weather') || 'on')).checked = true;
+            document.getElementById('full-' + (localStorage.getItem('feat-full') || 'off')).checked = true;
+            document.getElementById('3d-' + (localStorage.getItem('feat-3d') || 'off')).checked = true;
+            document.getElementById('fun-' + (localStorage.getItem('feat-fun') || 'off')).checked = true;
 
             saveAndApplyTheme();
             setMode(currentMode);
+            fetchWeather(false);
 
             if(localStorage.getItem(`${deviceId}_calcActive`) === 'true') {
                 document.getElementById('curr-car').value = localStorage.getItem(`${deviceId}_currDisplay`) || localStorage.getItem(`${deviceId}_initCurrCar`);
@@ -437,11 +488,148 @@
         document.getElementById('tab-general').classList.toggle('active', mode === 'general');
         document.getElementById('position-section').style.display = mode === 'rotation' ? 'block' : 'none';
         
-        // 사용자가 공차 계산을 'on'으로 두었을 때만 탭에 UI 띄우기
-        const calcOpt = localStorage.getItem('feat-calc') || 'on';
-        document.getElementById('general-extra').style.display = (mode === 'general' && calcOpt === 'on') ? 'block' : 'none';
+        document.getElementById('general-extra').style.display = (mode === 'general' && (localStorage.getItem('feat-calc') || 'on') === 'on') ? 'block' : 'none';
+        document.getElementById('weather-section').style.display = (localStorage.getItem('feat-weather') || 'on') === 'on' ? 'block' : 'none';
         
         update();
+    }
+
+    // [Yr.no API 데이터 Fetch 및 매핑]
+    async function fetchWeather(isManual = false) {
+        const weatherUiEnabled = (localStorage.getItem('feat-weather') || 'on') === 'on';
+        if(!weatherUiEnabled) return;
+
+        const now = Date.now();
+        // 5분 캐싱 보호 (수동 요청 제외)
+        if (!isManual && now - lastWeatherFetchTime < 300000 && lastWeatherFetchTime !== 0) return;
+
+        const lat = 37.442; // 소하리공장 위도
+        const lon = 126.890; // 소하리공장 경도
+        const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`;
+
+        try {
+            // Yr API 호출 규약상 User-Agent 설정 안내 대응
+            const response = await fetch(url);
+            if(!response.ok) throw new Error('네트워크 응답 불량');
+            const data = await response.json();
+            
+            lastWeatherFetchTime = now;
+            localStorage.setItem('weather_last_ts', lastWeatherFetchTime);
+            localStorage.setItem('weather_cache_data', JSON.stringify(data));
+            
+            parseAndRenderWeather(data);
+            if(isManual) showCustomAlert("기상 정보가 최신으로 동기화되었습니다.");
+        } catch (error) {
+            console.error("날씨 정보 요청 실패, 캐시 조회:", error);
+            const cached = localStorage.getItem('weather_cache_data');
+            if(cached) parseAndRenderWeather(JSON.parse(cached));
+        }
+    }
+
+    function parseAndRenderWeather(data) {
+        const timeseries = data.properties.timeseries;
+        const hourlyContainer = document.getElementById('weather-hourly-list');
+        hourlyContainer.innerHTML = '';
+
+        const nowObj = new Date();
+        let currentStatusMapped = 'clearsky';
+        let currentSummaryText = '';
+
+        // 최대 24시간 동안의 시간별 예보 파싱
+        let count = 0;
+        for (let i = 0; i < timeseries.length && count < 24; i++) {
+            const item = timeseries[i];
+            const itemTime = new Date(item.time);
+            
+            // 지난 시간 제외
+            if (itemTime.getTime() < nowObj.getTime() - 3500000) continue;
+
+            const temp = Math.round(item.data.instant.details.air_temperature);
+            const symbolCode = item.data.next_1_hours ? item.data.next_1_hours.summary.symbol_code : item.data.next_6_hours.summary.symbol_code;
+            const pop = item.data.next_1_hours?.details?.probability_of_precipitation ?? item.data.next_6_hours?.details?.probability_of_precipitation ?? 0;
+
+            // Yr 심볼 매핑 알고리즘
+            let emoji = '☀️';
+            let statusKey = 'clearsky';
+            let krDesc = '화창';
+
+            if (symbolCode.includes('rain') || symbolCode.includes('sleet')) { emoji = '🌧️'; statusKey = 'rain'; krDesc = '비'; }
+            else if (symbolCode.includes('snow')) { emoji = '❄️'; statusKey = 'snow'; krDesc = '눈'; }
+            else if (symbolCode.includes('cloudy')) { emoji = '☁️'; statusKey = 'cloudy'; krDesc = '흐림'; }
+            else if (symbolCode.includes('fair') || symbolCode.includes('partlycloudy')) { emoji = '⛅'; statusKey = 'clearsky'; krDesc = '구름 조금'; }
+
+            const displayHour = String(itemTime.getHours()).padStart(2, '0') + "시";
+            const isNowItem = count === 0;
+
+            if (isNowItem) {
+                currentStatusMapped = statusKey;
+                currentSummaryText = `${krDesc} ${temp}℃`;
+                document.getElementById('weather-main-summary').innerText = currentSummaryText;
+            }
+
+            const hourCard = document.createElement('div');
+            hourCard.className = `weather-hourly-item ${isNowItem ? 'is-now' : ''}`;
+            hourCard.innerHTML = `
+                <span class="weather-time">${isNowItem ? '현재' : displayHour}</span>
+                <span class="weather-icon">${emoji}</span>
+                <span class="weather-temp">${temp}°</span>
+                <span class="weather-pop">${pop > 10 ? pop + '%' : ''}</span>
+            `;
+            hourlyContainer.appendChild(hourCard);
+            count++;
+        }
+
+        currentWeatherStatus = currentStatusMapped;
+        updateWeatherRefreshLabel();
+
+        // 테마 모드가 '날씨테마'일 경우 바디 클래스 즉시 동적 리프레시
+        if (localStorage.getItem('theme-bg') === 'weather') {
+            saveAndApplyTheme();
+        }
+    }
+
+    function updateWeatherRefreshLabel() {
+        if (lastWeatherFetchTime === 0) {
+            const savedTs = localStorage.getItem('weather_last_ts');
+            if(savedTs) lastWeatherFetchTime = parseInt(savedTs);
+            else return;
+        }
+        const diffMin = Math.floor((Date.now() - lastWeatherFetchTime) / 60000);
+        document.getElementById('weather-last-updated').innerText = diffMin <= 0 ? '방금 전' : `${diffMin}분 전`;
+    }
+
+    // [실시간 백그라운드 날씨 이펙트 파티클 제어]
+    function renderWeatherEffects() {
+        const container = document.getElementById('weather-canvas-container');
+        container.innerHTML = '';
+        
+        const isWeatherTheme = localStorage.getItem('theme-bg') === 'weather';
+        if (!isWeatherTheme) return;
+
+        if (currentWeatherStatus === 'rain') {
+            for (let i = 0; i < 40; i++) {
+                let drop = document.createElement('div');
+                drop.className = 'rain-drop';
+                drop.style.left = Math.random() * 100 + 'vw';
+                drop.style.top = Math.random() * -50 + 'px';
+                drop.style.animationDuration = 0.5 + Math.random() * 0.5 + 's';
+                drop.style.animationDelay = Math.random() * 2 + 's';
+                container.appendChild(drop);
+            }
+        } else if (currentWeatherStatus === 'snow') {
+            for (let i = 0; i < 30; i++) {
+                let flake = document.createElement('div');
+                flake.className = 'snow-flake';
+                const size = 2 + Math.random() * 5 + 'px';
+                flake.style.width = size;
+                flake.style.height = size;
+                flake.style.left = Math.random() * 100 + 'vw';
+                flake.style.top = Math.random() * -20 + 'px';
+                flake.style.animationDuration = 2 + Math.random() * 3 + 's';
+                flake.style.animationDelay = Math.random() * 5 + 's';
+                container.appendChild(flake);
+            }
+        }
     }
 
     function saveCurrCar() {
@@ -472,8 +660,7 @@
 
     function runCalc(showPopup = false) {
         if (localStorage.getItem(`${deviceId}_calcActive`) !== 'true') return;
-        const calcOpt = localStorage.getItem('feat-calc') || 'on';
-        if (calcOpt !== 'on' || currentMode !== 'general') return;
+        if ((localStorage.getItem('feat-calc') || 'on') !== 'on' || currentMode !== 'general') return;
 
         const initCurr = parseInt(localStorage.getItem(`${deviceId}_initCurrCar`));
         const target = parseInt(localStorage.getItem(`${deviceId}_targetCar`));
@@ -632,6 +819,7 @@
 
         renderList(currentSchedule, currentShift);
         if(currentMode === 'general') runCalc(false);
+        updateWeatherRefreshLabel();
     }
 
     function renderList(list, currentShift) {
@@ -646,7 +834,14 @@
 
     document.querySelectorAll('input').forEach(input => input.addEventListener('change', update));
     window.onload = loadSavedSettings;
+    
+    // 1초 메인 타임루프 루틴
     setInterval(update, 1000);
+    
+    // 5분(300,000ms) 주기 외부 날씨 데이터 자동갱신 루프 설정
+    setInterval(function() {
+        fetchWeather(false);
+    }, 300000);
 </script>
 </body>
 </html>
