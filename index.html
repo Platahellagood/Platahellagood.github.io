@@ -13,8 +13,11 @@
             --secondary: #8E8E93;
             --primary: #007AFF; 
             --tab-bg: #E3E3E8;
-            --shadow-color: rgba(0,0,0,0.1);
-            --3d-depth: #c7c7cc;
+            --shadow-color: rgba(0,0,0,0.08);
+            --3d-depth: #d1d1d6;
+            /* 3D 자이로 변수 초기화 */
+            --rx: 0deg;
+            --ry: 0deg;
         }
 
         /* 다크 모드 (일반) */
@@ -53,128 +56,124 @@
             transition: background 0.3s, color 0.3s;
             padding-top: env(safe-area-inset-top);
             overflow-x: hidden;
-            /* 3D 원근감 설정 */
-            perspective: 1000px;
+            /* body에 있던 perspective 제거 (모달 깨짐 방지) */
         }
 
         .container { 
             max-width: 500px; margin: auto; position: relative; 
-            transform-style: preserve-3d;
-            transition: transform 0.1s ease-out;
         }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; transform: translateZ(10px); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .current-time-bar { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
         .settings-btn { font-size: 26px; cursor: pointer; background: none; border: none; color: var(--text); padding: 5px; }
 
-        .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; transform: translateZ(15px); }
+        .tab-menu { display: flex; background: var(--tab-bg); border-radius: 14px; padding: 3px; margin-bottom: 15px; }
         .tab-btn { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: bold; color: var(--secondary); border-radius: 11px; cursor: pointer; border: none; background: transparent; transition: 0.2s; }
         .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 6px var(--shadow-color); }
 
-        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px var(--shadow-color); text-align: center; transform: translateZ(20px); transform-style: preserve-3d; }
+        .card { background: var(--card); border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px var(--shadow-color); text-align: center; }
         #countdown-label { font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight: 700; height: 1.2em; }
         #timer-text { font-size: 64px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; margin: 5px 0; letter-spacing: -2px; display: inline-block; }
         #current-task { font-size: 16px; font-weight: 600; color: var(--text); opacity: 0.9; }
 
-        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; transform: translateZ(10px); }
-        .radio-group { display: flex; background: var(--tab-bg); border-radius: 12px; padding: 2px; margin-bottom: 10px; transform: translateZ(15px); }
+        .label { font-size: 12px; font-weight: bold; color: var(--secondary); margin: 15px 0 8px 5px; display: block; }
+        .radio-group { display: flex; background: var(--tab-bg); border-radius: 12px; padding: 2px; margin-bottom: 10px; }
         .radio-group label { flex: 1; text-align: center; padding: 10px 0; font-size: 13px; border-radius: 10px; cursor: pointer; color: var(--secondary); transition: 0.2s; }
         .radio-group input { display: none; }
         .radio-group input:checked + label { background: var(--card); box-shadow: 0 2px 6px var(--shadow-color); font-weight: bold; color: var(--primary); }
 
-        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; transform: translateZ(15px); }
+        .schedule-card { background: var(--card); border-radius: 18px; padding: 5px; margin-top: 10px; }
         .schedule-item { padding: 14px 18px; border-bottom: 0.5px solid var(--tab-bg); display: flex; justify-content: space-between; font-size: 13px; }
         .schedule-item:last-child { border-bottom: none; }
         .schedule-item.active-now { background: var(--tab-bg); border-radius: 14px; color: var(--primary); font-weight: bold; }
 
-        /* 설정 모달 */
-        #settings-modal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px);
-            perspective: none; /* 모달은 평면 유지 */
-        }
-        .modal-content { background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
-        .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
-
         /* =========================================
-           ✨ 3D 엔진 코어 (CSS Extrusion + JS Tracking)
+           ✨ 수정된 3D 엔진: 배경 고정 & 카드만 반응
            ========================================= */
-        body.mode-3d .container {
-            /* JS에서 주는 회전값을 부드럽게 이어줌 */
-            transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+        .3d-target {
+            transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.15s;
         }
 
-        body.mode-3d [data-3d-text] {
+        body.mode-3d .3d-target {
+            transform-style: preserve-3d;
+            /* JS가 계산한 변수(--rx, --ry)를 받아 개별 카드만 회전 */
+            transform: perspective(800px) rotateX(var(--rx)) rotateY(var(--ry));
+            box-shadow: calc(var(--ry) * -0.5px) calc(var(--rx) * 0.5px + 10px) 25px var(--shadow-color);
+        }
+
+        body.mode-3d .pop-out {
             display: inline-block;
             transform: translateZ(30px);
-            /* 그림자를 여러 겹 쌓아 실제 두께(Mesh)가 있는 것처럼 렌더링 */
             text-shadow: 
-                0px 1px 0px var(--3d-depth),
                 0px 2px 0px var(--3d-depth),
-                0px 3px 0px var(--3d-depth),
-                0px 4px 10px rgba(0,0,0,0.4);
-            transition: text-shadow 0.3s;
+                0px 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s, text-shadow 0.3s;
         }
 
-        body.mode-3d #timer-text {
-            transform: translateZ(50px); /* 메인 타이머는 더 높게 돌출 */
+        body.mode-3d #timer-text.pop-out {
+            transform: translateZ(50px);
             text-shadow: 
                 0px 1px 0px var(--3d-depth),
                 0px 2px 0px var(--3d-depth),
                 0px 3px 0px var(--3d-depth),
                 0px 4px 0px var(--3d-depth),
-                0px 5px 0px var(--3d-depth),
-                0px 8px 15px rgba(0,0,0,0.5);
+                0px 8px 15px rgba(0,0,0,0.4);
         }
 
-        body.mode-3d .card, 
-        body.mode-3d .schedule-card, 
-        body.mode-3d .tab-menu, 
-        body.mode-3d .radio-group {
-            box-shadow: 
-                -5px 10px 20px var(--shadow-color),
-                -1px 3px 0px var(--3d-depth); /* 카드 자체의 두께감 부여 */
+        /* =========================================
+           설정 모달 (3D 레이어와 완벽 분리)
+           ========================================= */
+        #settings-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 9999; /* 최상단 고정 */
+            align-items: center; justify-content: center; 
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
         }
+        .modal-content { background: var(--card); width: 85%; max-width: 350px; border-radius: 28px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); transform: translateZ(0); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: 800; font-size: 18px; }
+        .close-btn { cursor: pointer; font-size: 24px; color: var(--secondary); }
     </style>
 </head>
 <body class="theme-blue">
 
     <div class="container" id="main-container">
         <div class="header">
-            <div class="current-time-bar" id="realtime-clock" data-3d-text>00:00:00</div>
+            <div class="current-time-bar" id="realtime-clock">00:00:00</div>
             <button class="settings-btn" onclick="toggleSettings(true)">⚙️</button>
         </div>
 
         <div class="tab-menu">
-            <button class="tab-btn active" id="tab-rotation" onclick="setMode('rotation')" data-3d-text>🔄 교대 근무</button>
-            <button class="tab-btn" id="tab-general" onclick="setMode('general')" data-3d-text>⏳ 일반 근무</button>
+            <button class="tab-btn active" id="tab-rotation" onclick="setMode('rotation')">🔄 교대 근무</button>
+            <button class="tab-btn" id="tab-general" onclick="setMode('general')">⏳ 일반 근무</button>
         </div>
 
-        <div class="card">
-            <div id="countdown-label" data-3d-text>--</div>
-            <div id="timer-text" data-3d-text>00:00</div>
-            <div id="current-task" data-3d-text></div>
+        <div class="card 3d-target">
+            <div id="countdown-label" class="pop-out">--</div>
+            <br>
+            <div id="timer-text" class="pop-out">00:00</div>
+            <br>
+            <div id="current-task" class="pop-out"></div>
         </div>
 
         <div id="position-section">
-            <span class="label" data-3d-text>포지션</span>
+            <span class="label">포지션</span>
             <div class="radio-group">
-                <input type="radio" name="pos" id="lh" value="lh" checked><label for="lh" data-3d-text>LH</label>
-                <input type="radio" name="pos" id="rest" value="rest"><label for="rest" data-3d-text>휴식</label>
-                <input type="radio" name="pos" id="rh" value="rh"><label for="rh" data-3d-text>RH</label>
-                <input type="radio" name="pos" id="glass" value="glass"><label for="glass" data-3d-text>글라스</label>
+                <input type="radio" name="pos" id="lh" value="lh" checked><label for="lh">LH</label>
+                <input type="radio" name="pos" id="rest" value="rest"><label for="rest">휴식</label>
+                <input type="radio" name="pos" id="rh" value="rh"><label for="rh">RH</label>
+                <input type="radio" name="pos" id="glass" value="glass"><label for="glass">글라스</label>
             </div>
         </div>
 
-        <span class="label" data-3d-text>근무조</span>
+        <span class="label">근무조</span>
         <div class="radio-group">
-            <input type="radio" name="shift" id="day" value="day" checked><label for="day" data-3d-text>☀️ 주간</label>
-            <input type="radio" name="shift" id="night" value="night"><label for="night" data-3d-text>🌙 야간</label>
+            <input type="radio" name="shift" id="day" value="day" checked><label for="day">☀️ 주간</label>
+            <input type="radio" name="shift" id="night" value="night"><label for="night">🌙 야간</label>
         </div>
 
-        <span class="label" data-3d-text>오늘의 상세 일정</span>
-        <div class="schedule-card">
+        <span class="label">오늘의 상세 일정</span>
+        <div class="schedule-card 3d-target">
             <div id="schedule-list"></div>
         </div>
     </div>
@@ -212,7 +211,6 @@
 <script>
     let currentMode = localStorage.getItem('mode') || 'rotation';
     
-    // 일정 데이터 유지
     const RAW_DATA = {
         lh: [
             {s:"06:50", e:"07:15", p:"LH"}, {s:"07:20", e:"07:45", p:"휴식"}, {s:"07:50", e:"08:15", p:"RH"}, {s:"08:20", e:"08:50", p:"글라스"},
@@ -267,6 +265,12 @@
 
     function toggleSettings(show) {
         document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
+        
+        // 설정창이 열려있을 때 3D 움직임 일시 정지 (iOS 충돌 방지)
+        if (show) {
+            document.documentElement.style.setProperty('--rx', `0deg`);
+            document.documentElement.style.setProperty('--ry', `0deg`);
+        }
     }
 
     function saveAndApplyTheme() {
@@ -281,11 +285,13 @@
         document.body.className = '';
         if (bg === 'dark') document.body.classList.add('dark-mode');
         if (bg === 'oled') document.body.classList.add('oled-mode');
+        
         if (is3D === 'on') {
             document.body.classList.add('mode-3d');
         } else {
-            // 3D가 꺼지면 회전값 초기화
-            document.getElementById('main-container').style.transform = `rotateX(0deg) rotateY(0deg)`;
+            // 3D 꺼짐 시 축 변수 완전 초기화
+            document.documentElement.style.setProperty('--rx', `0deg`);
+            document.documentElement.style.setProperty('--ry', `0deg`);
         }
         document.body.classList.add('theme-' + acc);
     }
@@ -387,37 +393,34 @@
         const listDiv = document.getElementById('schedule-list');
         listDiv.innerHTML = list.map(item => `
             <div class="schedule-item ${currentShift && item.s === currentShift.s ? 'active-now' : ''}">
-                <span data-3d-text>${item.s} ~ ${item.e}</span>
-                <span data-3d-text>${item.p}</span>
+                <span class="pop-out">${item.s} ~ ${item.e}</span>
+                <span class="pop-out">${item.p}</span>
             </div>
         `).join('');
     }
 
     /* -------------------------------------------------------------
-       디바이스 기울기(자이로스코프) & 마우스 패럴랙스 3D 이벤트
+       수정된 3D 엔진: CSS 변수 주입 방식 (배경 렌더링 파괴 방지)
     ------------------------------------------------------------- */
-    const container = document.getElementById('main-container');
+    function handleMove(x, y) {
+        if (!document.body.classList.contains('mode-3d') || document.getElementById('settings-modal').style.display === 'flex') return;
+        document.documentElement.style.setProperty('--rx', `${x}deg`);
+        document.documentElement.style.setProperty('--ry', `${y}deg`);
+    }
 
     // 데스크탑 마우스 트래킹
     window.addEventListener('mousemove', (e) => {
-        if (!document.body.classList.contains('mode-3d')) return;
-        
-        // 화면 중심을 기준으로 마우스 위치 계산 (-1 ~ 1)
-        const xAxis = (window.innerWidth / 2 - e.pageX) / 25; 
-        const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
-        
-        container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        const xAxis = (window.innerWidth / 2 - e.pageX) / 30; 
+        const yAxis = (window.innerHeight / 2 - e.pageY) / 30;
+        handleMove(yAxis, -xAxis);
     });
 
-    // 모바일 자이로스코프 트래킹 (스마트폰 기울기 반응)
+    // 모바일 자이로스코프 트래킹
     window.addEventListener('deviceorientation', (e) => {
-        if (!document.body.classList.contains('mode-3d')) return;
-        
-        // beta(상하 기울기), gamma(좌우 기울기) 제한 설정
-        const tiltX = Math.min(Math.max(e.beta - 45, -25), 25); // 디바이스를 45도 들고 있는 것을 기준으로 설정
-        const tiltY = Math.min(Math.max(e.gamma, -25), 25);
-        
-        container.style.transform = `rotateX(${-tiltX}deg) rotateY(${tiltY}deg)`;
+        // 움직임 각도를 부드럽게 15도 이내로 제한
+        const tiltX = Math.min(Math.max(e.beta - 45, -15), 15); 
+        const tiltY = Math.min(Math.max(e.gamma, -15), 15);
+        handleMove(-tiltX, tiltY);
     });
 
     document.querySelectorAll('input').forEach(input => input.addEventListener('change', update));
